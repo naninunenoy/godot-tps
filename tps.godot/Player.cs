@@ -25,6 +25,7 @@ public partial class Player : CharacterBody3D
         _cameraPivot.GlobalPosition = GlobalPosition;
         _springArm.AddExcludedObject(GetRid());
         Input.MouseMode = Input.MouseModeEnum.Captured;
+        _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
     }
 
     public override void _Input(InputEvent @event)
