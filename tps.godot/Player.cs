@@ -48,6 +48,7 @@ public partial class Player : CharacterBody3D
 
         Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
+
         Vector3 camForward = -_cameraPivot.GlobalBasis.Z;
         camForward.Y = 0;
         if (!camForward.IsZeroApprox()) camForward = camForward.Normalized();

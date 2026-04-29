@@ -16,6 +16,7 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 - `.tscn` / `.tres` などの Godot リソースファイルの情報取得・編集には godot-mcp ツールを使う（直接ファイル編集しない）
 - 動作確認が必要な場合は godot-mcp (`run_project` / `get_debug_output` など) を使う
 - 動作確認は明示的に「動作確認して」と指示された場合のみ行う（自動では実行しない）
+- `run_project` 後はユーザーの指示を待たず即座に `get_debug_output` でログを確認する
 
 ## ロギング方針
 
