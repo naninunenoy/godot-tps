@@ -1,3 +1,7 @@
+# .NET build artifacts
+bin/
+obj/
+
 # Windows
 Thumbs.db
 Thumbs.db:encryptable
