@@ -9,6 +9,13 @@
             "command": "dotnet format tps.sln 2>/dev/null || true",
             "timeout": 60,
             "statusMessage": "Running dotnet format..."
+          },
+          {
+            "type": "command",
+            "command": "$r = dotnet build tps.godot 2>&1; if ($LASTEXITCODE -ne 0) { $ctx = \"Build errors:`n\" + ($r -join \"`n\"); @{hookSpecificOutput=@{hookEventName=\"PostToolUse\";additionalContext=$ctx}} | ConvertTo-Json -Compress }",
+            "shell": "powershell",
+            "timeout": 60,
+            "statusMessage": "Running dotnet build..."
           }
         ]
       }
