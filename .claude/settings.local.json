@@ -8,7 +8,10 @@
       "Bash(dotnet build *)",
       "mcp__godot__stop_project",
       "mcp__godot__get_project_info",
-      "Bash(powershell -Command \"dotnet build tps.godot\")"
+      "Bash(powershell -Command \"dotnet build tps.godot\")",
+      "Bash(git status *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
