@@ -1,4 +1,6 @@
 using Godot;
+using Microsoft.Extensions.Logging;
+using tps.Logging;
 
 namespace tps;
 
@@ -6,6 +8,8 @@ public partial class Player : CharacterBody3D
 {
     [Export] public float Speed = 5f;
     [Export] public float MouseSensitivity = 0.003f;
+
+    private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
     const float Gravity = 9.8f;
 
@@ -61,6 +65,7 @@ public partial class Player : CharacterBody3D
             vel.X = moveDir.X * Speed;
             vel.Z = moveDir.Z * Speed;
             _body.Basis = _body.Basis.Slerp(Basis.LookingAt(moveDir, Vector3.Up), dt * 10f);
+            _logger.LogDebug("move dir={Dir} vel=({X:F2}, {Z:F2})", moveDir, vel.X, vel.Z);
         }
         else
         {
