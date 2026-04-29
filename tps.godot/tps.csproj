@@ -8,4 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\tps.csharp\tps.csharp.csproj" />
+  </ItemGroup>
 </Project>

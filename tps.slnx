@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/tps.godot/">
+    <Project Path="tps.godot/tps.csproj" />
+  </Folder>
+  <Project Path="tps.csharp.test/tps.csharp.test.csproj" />
+  <Project Path="tps.csharp/tps.csharp.csproj" />
+</Solution>
