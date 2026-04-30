@@ -13,8 +13,11 @@ albedo_color = Color(0.2, 0.4, 0.9, 1)
 radius = 0.3
 height = 1.8
 
+[ext_resource type="PackedScene" path="res://Bullet.tscn" id="2_bullet"]
+
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_script")
+BulletScene = ExtResource("2_bullet")
 
 [node name="Body" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.9, 0)

@@ -11,6 +11,7 @@ public partial class Player : CharacterBody3D
     [Export] public float MouseSensitivity = 0.003f;
     [Export] public float JumpVelocity = 5f;
     [Export] public int WeaponDamage = 1;
+    [Export] public PackedScene BulletScene;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
@@ -64,10 +65,21 @@ public partial class Player : CharacterBody3D
             TryFire();
     }
 
+    private void SpawnBullet()
+    {
+        if (BulletScene == null) return;
+        var bullet = BulletScene.Instantiate<Node3D>();
+        GetTree().CurrentScene.AddChild(bullet);
+        bullet.GlobalTransform = _camera.GlobalTransform;
+        _logger.LogDebug("Bullet spawned");
+    }
+
     private void TryFire()
     {
         if (!_weapon.TryFire()) return;
         _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo, _weapon.MagazineSize);
+
+        SpawnBullet();
 
         var origin = _camera.GlobalPosition;
         var direction = -_camera.GlobalBasis.Z;
