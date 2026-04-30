@@ -30,7 +30,7 @@ public partial class Player : CharacterBody3D
         _springArm = GetNode<SpringArm3D>("CameraPivot/SpringArm3D");
         _body = GetNode<MeshInstance3D>("Body");
         _camera = GetNode<Camera3D>("CameraPivot/SpringArm3D/Camera3D");
-        _cameraPivot.GlobalPosition = GlobalPosition;
+        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 1.5f;
         _springArm.AddExcludedObject(GetRid());
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
@@ -42,7 +42,7 @@ public partial class Player : CharacterBody3D
         {
             _cameraPivot.RotateY(-motion.Relative.X * MouseSensitivity);
             var rot = _springArm.Rotation;
-            rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -0.2f, 1.0f);
+            rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -1.2f, 0f);
             _springArm.Rotation = rot;
         }
         if (@event is InputEventKey { Keycode: Key.Escape, Pressed: true })
@@ -98,7 +98,7 @@ public partial class Player : CharacterBody3D
     public override void _PhysicsProcess(double delta)
     {
         float dt = (float)delta;
-        _cameraPivot.GlobalPosition = GlobalPosition;
+        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 1.5f;
 
         Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
