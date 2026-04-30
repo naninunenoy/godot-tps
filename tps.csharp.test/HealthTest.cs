@@ -1,3 +1,4 @@
+using R3;
 using tps.csharp;
 using Shouldly;
 
@@ -9,7 +10,7 @@ public class HealthTest
     public void StartsAtMax()
     {
         var hp = new Health(100);
-        hp.Current.ShouldBe(100);
+        hp.Current.CurrentValue.ShouldBe(100);
         hp.IsAlive.ShouldBeTrue();
     }
 
@@ -18,7 +19,7 @@ public class HealthTest
     {
         var hp = new Health(100);
         hp.TakeDamage(30);
-        hp.Current.ShouldBe(70);
+        hp.Current.CurrentValue.ShouldBe(70);
     }
 
     [Fact]
@@ -26,7 +27,7 @@ public class HealthTest
     {
         bool died = false;
         var hp = new Health(10);
-        hp.OnDied += () => died = true;
+        hp.OnDied.Subscribe(_ => died = true);
         hp.TakeDamage(10);
         hp.IsAlive.ShouldBeFalse();
         died.ShouldBeTrue();
@@ -38,7 +39,7 @@ public class HealthTest
         var hp = new Health(10);
         hp.TakeDamage(10);
         hp.TakeDamage(99);
-        hp.Current.ShouldBe(0);
+        hp.Current.CurrentValue.ShouldBe(0);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public class HealthTest
         var hp = new Health(50);
         hp.TakeDamage(40);
         hp.Reset();
-        hp.Current.ShouldBe(50);
+        hp.Current.CurrentValue.ShouldBe(50);
         hp.IsAlive.ShouldBeTrue();
     }
 }

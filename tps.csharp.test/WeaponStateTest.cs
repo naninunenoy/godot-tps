@@ -1,3 +1,4 @@
+using R3;
 using tps.csharp;
 using Shouldly;
 
@@ -9,7 +10,7 @@ public class WeaponStateTest
     public void StartsWithFullMagazine()
     {
         var w = new WeaponState(10, 2f, 0.1f);
-        w.CurrentAmmo.ShouldBe(10);
+        w.CurrentAmmo.CurrentValue.ShouldBe(10);
         w.CanFire.ShouldBeTrue();
     }
 
@@ -18,7 +19,7 @@ public class WeaponStateTest
     {
         var w = new WeaponState(10, 2f, 0.1f);
         w.TryFire().ShouldBeTrue();
-        w.CurrentAmmo.ShouldBe(9);
+        w.CurrentAmmo.CurrentValue.ShouldBe(9);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class WeaponStateTest
         w.IsReloading.ShouldBeTrue();
         w.Update(1.1f);
         w.IsReloading.ShouldBeFalse();
-        w.CurrentAmmo.ShouldBe(5);
+        w.CurrentAmmo.CurrentValue.ShouldBe(5);
     }
 
     [Fact]
@@ -65,5 +66,29 @@ public class WeaponStateTest
     {
         var w = new WeaponState(5, 1f, 0.1f);
         w.TryStartReload().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void OnFiredEmitsOnEachShot()
+    {
+        var w = new WeaponState(5, 2f, 0.1f);
+        int count = 0;
+        w.OnFired.Subscribe(_ => count++);
+        w.TryFire();
+        w.Update(0.2f);
+        w.TryFire();
+        count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void OnReloadCompletedEmitsAfterDuration()
+    {
+        var w = new WeaponState(5, 1f, 0.1f);
+        bool reloaded = false;
+        w.OnReloadCompleted.Subscribe(_ => reloaded = true);
+        w.TryFire();
+        w.TryStartReload();
+        w.Update(1.1f);
+        reloaded.ShouldBeTrue();
     }
 }

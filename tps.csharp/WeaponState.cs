@@ -1,27 +1,35 @@
 using System;
+using R3;
 
 namespace tps.csharp;
 
-public class WeaponState
+public class WeaponState : IDisposable
 {
     public int MagazineSize { get; }
-    public int CurrentAmmo { get; private set; }
     public float ReloadDuration { get; }
     public float FireInterval { get; }
+
+    private readonly ReactiveProperty<int> _currentAmmo;
+    private readonly Subject<Unit> _onFired = new();
+    private readonly Subject<Unit> _onReloadCompleted = new();
 
     private float _reloadTimer;
     private float _fireCooldown;
 
+    public ReadOnlyReactiveProperty<int> CurrentAmmo => _currentAmmo;
+    public Observable<Unit> OnFired => _onFired;
+    public Observable<Unit> OnReloadCompleted => _onReloadCompleted;
+
     public bool IsReloading => _reloadTimer > 0f;
-    public bool CanFire => !IsReloading && _fireCooldown <= 0f && CurrentAmmo > 0;
-    public bool NeedsReload => CurrentAmmo == 0 && !IsReloading;
+    public bool CanFire => !IsReloading && _fireCooldown <= 0f && _currentAmmo.Value > 0;
+    public bool NeedsReload => _currentAmmo.Value == 0 && !IsReloading;
 
     public WeaponState(int magazineSize, float reloadDuration, float fireInterval)
     {
         MagazineSize = magazineSize;
         ReloadDuration = reloadDuration;
         FireInterval = fireInterval;
-        CurrentAmmo = magazineSize;
+        _currentAmmo = new ReactiveProperty<int>(magazineSize);
     }
 
     public void Update(float delta)
@@ -32,7 +40,8 @@ public class WeaponState
             if (_reloadTimer <= 0f)
             {
                 _reloadTimer = 0f;
-                CurrentAmmo = MagazineSize;
+                _currentAmmo.Value = MagazineSize;
+                _onReloadCompleted.OnNext(Unit.Default);
             }
         }
         if (_fireCooldown > 0f)
@@ -42,16 +51,24 @@ public class WeaponState
     public bool TryFire()
     {
         if (!CanFire) return false;
-        CurrentAmmo--;
+        _currentAmmo.Value--;
         _fireCooldown = FireInterval;
+        _onFired.OnNext(Unit.Default);
         return true;
     }
 
     public bool TryStartReload()
     {
-        if (IsReloading || CurrentAmmo == MagazineSize) return false;
+        if (IsReloading || _currentAmmo.Value == MagazineSize) return false;
         _reloadTimer = ReloadDuration;
-        CurrentAmmo = 0;
+        _currentAmmo.Value = 0;
         return true;
+    }
+
+    public void Dispose()
+    {
+        _currentAmmo.Dispose();
+        _onFired.Dispose();
+        _onReloadCompleted.Dispose();
     }
 }

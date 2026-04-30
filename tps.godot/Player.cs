@@ -1,5 +1,6 @@
 using Godot;
 using Microsoft.Extensions.Logging;
+using R3;
 using tps.csharp;
 using tps.Logging;
 
@@ -11,16 +12,16 @@ public partial class Player : CharacterBody3D
     [Export] public float MouseSensitivity = 0.003f;
     [Export] public float JumpVelocity = 5f;
     [Export] public int WeaponDamage = 1;
-    [Export] public PackedScene BulletScene;
+    [Export] public PackedScene BulletScene = null!;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
     const float Gravity = 9.8f;
 
-    Node3D _cameraPivot;
-    SpringArm3D _springArm;
-    MeshInstance3D _body;
-    Camera3D _camera;
+    Node3D _cameraPivot = null!;
+    SpringArm3D _springArm = null!;
+    MeshInstance3D _body = null!;
+    Camera3D _camera = null!;
 
     readonly WeaponState _weapon = new(30, 2f, 0.1f);
 
@@ -34,6 +35,11 @@ public partial class Player : CharacterBody3D
         _springArm.AddExcludedObject(GetRid());
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
+    }
+
+    public override void _ExitTree()
+    {
+        _weapon.Dispose();
     }
 
     public override void _Input(InputEvent @event)
@@ -50,7 +56,7 @@ public partial class Player : CharacterBody3D
         if (@event.IsActionPressed("reload"))
         {
             if (_weapon.TryStartReload())
-                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", _weapon.CurrentAmmo, _weapon.MagazineSize);
+                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", _weapon.CurrentAmmo.CurrentValue, _weapon.MagazineSize);
         }
     }
 
@@ -77,7 +83,7 @@ public partial class Player : CharacterBody3D
     private void TryFire()
     {
         if (!_weapon.TryFire()) return;
-        _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo, _weapon.MagazineSize);
+        _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo.CurrentValue, _weapon.MagazineSize);
 
         SpawnBullet();
 

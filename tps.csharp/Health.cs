@@ -1,31 +1,41 @@
 using System;
+using R3;
 
 namespace tps.csharp;
 
-public class Health
+public class Health : IDisposable
 {
     public int Max { get; }
-    public int Current { get; private set; }
-    public bool IsAlive => Current > 0;
+    public bool IsAlive => _current.CurrentValue > 0;
 
-    public event Action OnDied;
+    private readonly ReactiveProperty<int> _current;
+    private readonly Subject<Unit> _onDied = new();
+
+    public ReadOnlyReactiveProperty<int> Current => _current;
+    public Observable<Unit> OnDied => _onDied;
 
     public Health(int max)
     {
         Max = max;
-        Current = max;
+        _current = new ReactiveProperty<int>(max);
     }
 
     public void TakeDamage(int amount)
     {
         if (!IsAlive) return;
-        Current = Math.Max(0, Current - amount);
-        if (Current == 0)
-            OnDied?.Invoke();
+        _current.Value = Math.Max(0, _current.CurrentValue - amount);
+        if (_current.CurrentValue == 0)
+            _onDied.OnNext(Unit.Default);
     }
 
     public void Reset()
     {
-        Current = Max;
+        _current.Value = Max;
+    }
+
+    public void Dispose()
+    {
+        _current.Dispose();
+        _onDied.Dispose();
     }
 }
