@@ -1,5 +1,6 @@
 using Godot;
 using Microsoft.Extensions.Logging;
+using tps.csharp;
 using tps.Logging;
 
 namespace tps;
@@ -8,6 +9,8 @@ public partial class Player : CharacterBody3D
 {
     [Export] public float Speed = 5f;
     [Export] public float MouseSensitivity = 0.003f;
+    [Export] public float JumpVelocity = 5f;
+    [Export] public int WeaponDamage = 1;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
@@ -16,12 +19,16 @@ public partial class Player : CharacterBody3D
     Node3D _cameraPivot;
     SpringArm3D _springArm;
     MeshInstance3D _body;
+    Camera3D _camera;
+
+    readonly WeaponState _weapon = new(30, 2f, 0.1f);
 
     public override void _Ready()
     {
         _cameraPivot = GetNode<Node3D>("CameraPivot");
         _springArm = GetNode<SpringArm3D>("CameraPivot/SpringArm3D");
         _body = GetNode<MeshInstance3D>("Body");
+        _camera = GetNode<Camera3D>("CameraPivot/SpringArm3D/Camera3D");
         _cameraPivot.GlobalPosition = GlobalPosition;
         _springArm.AddExcludedObject(GetRid());
         Input.MouseMode = Input.MouseModeEnum.Captured;
@@ -39,6 +46,41 @@ public partial class Player : CharacterBody3D
         }
         if (@event is InputEventKey { Keycode: Key.Escape, Pressed: true })
             Input.MouseMode = Input.MouseModeEnum.Visible;
+        if (@event.IsActionPressed("reload"))
+        {
+            if (_weapon.TryStartReload())
+                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", _weapon.CurrentAmmo, _weapon.MagazineSize);
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        _weapon.Update((float)delta);
+
+        if (_weapon.NeedsReload)
+            _weapon.TryStartReload();
+
+        if (Input.IsActionPressed("fire") && Input.MouseMode == Input.MouseModeEnum.Captured)
+            TryFire();
+    }
+
+    private void TryFire()
+    {
+        if (!_weapon.TryFire()) return;
+        _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo, _weapon.MagazineSize);
+
+        var origin = _camera.GlobalPosition;
+        var direction = -_camera.GlobalBasis.Z;
+        var end = origin + direction * 200f;
+
+        var query = PhysicsRayQueryParameters3D.Create(origin, end);
+        query.Exclude = [GetRid()];
+
+        var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
+        if (result.Count == 0) return;
+
+        if (result["collider"].AsGodotObject() is Target target)
+            target.TakeDamage(WeaponDamage);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -47,7 +89,6 @@ public partial class Player : CharacterBody3D
         _cameraPivot.GlobalPosition = GlobalPosition;
 
         Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
-
 
         Vector3 camForward = -_cameraPivot.GlobalBasis.Z;
         camForward.Y = 0;
@@ -62,6 +103,13 @@ public partial class Player : CharacterBody3D
             moveDir = moveDir.Normalized();
 
         var vel = Velocity;
+
+        if (IsOnFloor() && Input.IsActionJustPressed("jump"))
+        {
+            vel.Y = JumpVelocity;
+            _logger.LogDebug("Jump");
+        }
+
         if (moveDir != Vector3.Zero)
         {
             vel.X = moveDir.X * Speed;

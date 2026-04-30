@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dh7iypbkqbi0m" path="res://Main.cs" id="1_ig7tw"]
 [ext_resource type="PackedScene" uid="uid://cx4k7xm2p9n4c" path="res://Player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://Target.tscn" id="3_target"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -42,3 +43,27 @@ shape = SubResource("BoxShape_ground")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 position = Vector3(0, 1, 0)
+
+[node name="Target1" parent="." instance=ExtResource("3_target")]
+position = Vector3(-4, 0, -8)
+
+[node name="Target2" parent="." instance=ExtResource("3_target")]
+position = Vector3(-2, 0, -8)
+
+[node name="Target3" parent="." instance=ExtResource("3_target")]
+position = Vector3(0, 0, -8)
+
+[node name="Target4" parent="." instance=ExtResource("3_target")]
+position = Vector3(2, 0, -8)
+
+[node name="Target5" parent="." instance=ExtResource("3_target")]
+position = Vector3(4, 0, -8)
+
+[node name="Target6" parent="." instance=ExtResource("3_target")]
+position = Vector3(-3, 0, -13)
+
+[node name="Target7" parent="." instance=ExtResource("3_target")]
+position = Vector3(0, 0, -13)
+
+[node name="Target8" parent="." instance=ExtResource("3_target")]
+position = Vector3(3, 0, -13)
