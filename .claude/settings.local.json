@@ -11,7 +11,10 @@
       "Bash(powershell -Command \"dotnet build tps.godot\")",
       "Bash(git status *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet test *)",
+      "Bash(git *)"
     ]
   }
 }
