@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bq4j7lm2py8k1"]
 
-[ext_resource type="Script" path="res://Bullet.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://dm16exf0v2lsk" path="res://Bullet.cs" id="1_script"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
 radius = 0.05

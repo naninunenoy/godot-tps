@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cx4k7xm2qan4c"]
 
-[ext_resource type="Script" uid="uid://dp7k2mn4xq8yc" path="res://Player.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://gkauoj4ynwgw" path="res://Player.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bq4j7lm2py8k1" path="res://Bullet.tscn" id="2_bullet"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
 radius = 0.3
@@ -12,8 +13,6 @@ albedo_color = Color(0.2, 0.4, 0.9, 1)
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
 radius = 0.3
 height = 1.8
-
-[ext_resource type="PackedScene" path="res://Bullet.tscn" id="2_bullet"]
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_script")
