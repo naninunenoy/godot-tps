@@ -13,6 +13,9 @@ public partial class InputServer : Node
 
     public override void _Ready()
     {
+        if (!OS.IsDebugBuild())
+            return;
+
         var err = _tcpServer.Listen(Port);
         if (err != Error.Ok)
             GD.PrintErr($"[InputServer] Failed to listen on port {Port}: {err}");
