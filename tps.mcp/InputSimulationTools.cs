@@ -26,6 +26,20 @@ public class InputSimulationTools
         }
     }
 
+    [McpServerTool, Description("List all InputMap action names available in the running Godot project.")]
+    public static async Task<string> GetActions()
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{GodotBaseUrl}/actions");
+            return await response.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex)
+        {
+            return $"unreachable: {ex.Message}";
+        }
+    }
+
     [McpServerTool, Description("Simulate pressing a key action defined in Godot's InputMap.")]
     public static async Task<string> PressAction(
         [Description("The InputMap action name (e.g. 'ui_accept', 'move_forward')")] string action,

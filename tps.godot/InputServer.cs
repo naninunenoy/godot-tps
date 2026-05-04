@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Godot;
+
+public partial class InputServer : Node
+{
+    private readonly TcpServer _tcpServer = new();
+    private const int Port = 9876;
+
+    public override void _Ready()
+    {
+        var err = _tcpServer.Listen(Port);
+        if (err != Error.Ok)
+            GD.PrintErr($"[InputServer] Failed to listen on port {Port}: {err}");
+        else
+            GD.Print($"[InputServer] Listening on port {Port}");
+    }
+
+    public override void _ExitTree()
+    {
+        _tcpServer.Stop();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_tcpServer.IsConnectionAvailable())
+            HandleConnectionAsync(_tcpServer.TakeConnection());
+    }
+
+    private async void HandleConnectionAsync(StreamPeerTcp peer)
+    {
+        try
+        {
+            var (method, path, body) = await ReadRequestAsync(peer);
+            GD.PrintRich($"[InputServer] {method} {path}");
+
+            if (method == "GET" && path == "/ping")
+            {
+                SendResponse(peer, 200, "pong");
+            }
+            else if (method == "GET" && path == "/actions")
+            {
+                var actions = InputMap.GetActions().Select(a => a.ToString()).ToArray();
+                SendResponse(peer, 200, JsonSerializer.Serialize(actions));
+            }
+            else if (method == "POST" && path == "/press_action")
+            {
+                var result = await HandlePressActionAsync(body);
+                SendResponse(peer, 200, result);
+            }
+            else
+            {
+                SendResponse(peer, 404, $"not found: {path}");
+            }
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[InputServer] {ex.Message}");
+        }
+        finally
+        {
+            peer.DisconnectFromHost();
+        }
+    }
+
+    private async Task<(string method, string path, string body)> ReadRequestAsync(StreamPeerTcp peer)
+    {
+        var rawBytes = new List<byte>();
+        var headerEnd = -1;
+
+        while (headerEnd < 0)
+        {
+            peer.Poll();
+            var available = peer.GetAvailableBytes();
+            if (available > 0)
+            {
+                var result = peer.GetData(available);
+                if (result[0].As<Error>() == Error.Ok)
+                    rawBytes.AddRange(result[1].AsByteArray());
+
+                for (var i = 0; i <= rawBytes.Count - 4; i++)
+                {
+                    if (rawBytes[i] == '\r' && rawBytes[i + 1] == '\n' &&
+                        rawBytes[i + 2] == '\r' && rawBytes[i + 3] == '\n')
+                    {
+                        headerEnd = i;
+                        break;
+                    }
+                }
+            }
+
+            if (headerEnd < 0)
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+
+        var headerStr = Encoding.UTF8.GetString(rawBytes.Take(headerEnd).ToArray());
+        var lines = headerStr.Split("\r\n");
+        var requestParts = lines[0].Split(' ');
+        var method = requestParts[0];
+        var path = requestParts[1];
+
+        var contentLength = 0;
+        foreach (var line in lines.Skip(1))
+        {
+            if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+                contentLength = int.Parse(line.Split(':')[1].Trim());
+        }
+
+        var bodyBytes = rawBytes.Skip(headerEnd + 4).ToList();
+        while (bodyBytes.Count < contentLength)
+        {
+            peer.Poll();
+            var available = peer.GetAvailableBytes();
+            if (available > 0)
+            {
+                var result = peer.GetData(available);
+                if (result[0].As<Error>() == Error.Ok)
+                    bodyBytes.AddRange(result[1].AsByteArray());
+            }
+            else
+            {
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            }
+        }
+
+        return (method, path, Encoding.UTF8.GetString(bodyBytes.Take(contentLength).ToArray()));
+    }
+
+    private async Task<string> HandlePressActionAsync(string body)
+    {
+        using var doc = JsonDocument.Parse(body);
+        var root = doc.RootElement;
+        var action = root.GetProperty("action").GetString() ?? "";
+        var durationMs = root.TryGetProperty("durationMs", out var d) ? d.GetInt32() : 100;
+
+        if (!InputMap.HasAction(action))
+            return $"unknown action: {action}";
+
+        GD.Print($"[InputServer] ActionPress: {action} ({durationMs}ms)");
+        Input.ActionPress(action);
+        await ToSignal(GetTree().CreateTimer(durationMs / 1000.0), SceneTreeTimer.SignalName.Timeout);
+        Input.ActionRelease(action);
+
+        return $"pressed {action} for {durationMs}ms";
+    }
+
+    private static void SendResponse(StreamPeerTcp peer, int status, string body)
+    {
+        var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
+        var bodyBytes = Encoding.UTF8.GetBytes(body);
+        var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
+        peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+    }
+}
