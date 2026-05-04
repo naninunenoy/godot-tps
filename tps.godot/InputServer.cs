@@ -55,6 +55,11 @@ public partial class InputServer : Node
                 var result = await HandlePressActionAsync(body);
                 SendResponse(peer, 200, result);
             }
+            else if (method == "GET" && path == "/screenshot")
+            {
+                var imageBytes = await HandleScreenshotAsync();
+                SendBinaryResponse(peer, 200, imageBytes, "image/png");
+            }
             else
             {
                 SendResponse(peer, 404, $"not found: {path}");
@@ -151,11 +156,27 @@ public partial class InputServer : Node
         return $"pressed {action} for {durationMs}ms";
     }
 
+    private async Task<byte[]> HandleScreenshotAsync()
+    {
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        var image = GetViewport().GetTexture().GetImage();
+        var pngBytes = image.SavePngToBuffer();
+        GD.Print($"[InputServer] Screenshot captured ({pngBytes.Length} bytes)");
+        return pngBytes;
+    }
+
     private static void SendResponse(StreamPeerTcp peer, int status, string body)
     {
         var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
         var bodyBytes = Encoding.UTF8.GetBytes(body);
         var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
+        peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+    }
+
+    private static void SendBinaryResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    {
+        var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
+        var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
         peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
     }
 }

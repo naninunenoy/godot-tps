@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
 namespace tps.mcp;
@@ -38,6 +39,15 @@ public class InputSimulationTools
         {
             return $"unreachable: {ex.Message}";
         }
+    }
+
+    [McpServerTool, Description("Capture a screenshot of the running Godot game and return it as an image.")]
+    public static async Task<DataContent> TakeScreenshot()
+    {
+        var response = await _http.GetAsync($"{GodotBaseUrl}/screenshot");
+        response.EnsureSuccessStatusCode();
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        return new DataContent(bytes, "image/png");
     }
 
     [McpServerTool, Description("Simulate pressing a key action defined in Godot's InputMap.")]
