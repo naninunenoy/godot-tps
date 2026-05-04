@@ -4,4 +4,5 @@
   </Folder>
   <Project Path="tps.csharp.test/tps.csharp.test.csproj" />
   <Project Path="tps.csharp/tps.csharp.csproj" />
+  <Project Path="tps.mcp/tps.mcp.csproj" />
 </Solution>

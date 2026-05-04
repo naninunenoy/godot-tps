@@ -4,7 +4,7 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 
 ## 技術スタック
 
-- Godot 4.6 / C# (.NET 8) / Jolt Physics / Direct3D 12
+- Godot 4.6 / C# (.NET 8) / Jolt Physics / Direct3D 12 (Windows) / Metal (macOS)
 - プロジェクトディレクトリ: `tps.godot/`
 
 ## プロジェクト構成
