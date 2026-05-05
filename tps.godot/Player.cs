@@ -13,6 +13,7 @@ public partial class Player : CharacterBody3D
     [Export] public float JumpVelocity = 5f;
     [Export] public int WeaponDamage = 1;
     [Export] public PackedScene BulletScene = null!;
+    [Export] public bool ShowRaycastDebug = true;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
@@ -22,6 +23,7 @@ public partial class Player : CharacterBody3D
     SpringArm3D _springArm = null!;
     MeshInstance3D _body = null!;
     Camera3D _camera = null!;
+    MeshInstance3D? _aimMarker;
 
     readonly WeaponState _weapon = new(30, 2f, 0.1f);
     bool _isGameMode = true;
@@ -32,9 +34,26 @@ public partial class Player : CharacterBody3D
         _springArm = GetNode<SpringArm3D>("CameraPivot/SpringArm3D");
         _body = GetNode<MeshInstance3D>("Body");
         _camera = GetNode<Camera3D>("CameraPivot/SpringArm3D/Camera3D");
-        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 1.5f;
+        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
         _springArm.AddExcludedObject(GetRid());
         Input.MouseMode = Input.MouseModeEnum.Captured;
+
+        if (ShowRaycastDebug)
+        {
+            _aimMarker = new MeshInstance3D
+            {
+                TopLevel = true,
+                Mesh = new SphereMesh { Radius = 0.12f, Height = 0.24f },
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoColor = new Color(1, 1, 0),
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    NoDepthTest = true,
+                },
+            };
+            AddChild(_aimMarker);
+        }
+
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
     }
 
@@ -73,6 +92,23 @@ public partial class Player : CharacterBody3D
 
         if (Input.IsActionPressed("fire") && _isGameMode)
             TryFire();
+
+        if (ShowRaycastDebug && _aimMarker != null)
+            UpdateAimMarker();
+    }
+
+    private void UpdateAimMarker()
+    {
+        var origin = _camera.GlobalPosition;
+        var direction = -_camera.GlobalBasis.Z;
+        var end = origin + direction * 100f;
+        var query = PhysicsRayQueryParameters3D.Create(origin, end);
+        query.Exclude = [GetRid()];
+        var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
+        var hit = result.Count > 0;
+        _aimMarker!.GlobalPosition = hit ? result["position"].AsVector3() : end;
+        ((StandardMaterial3D)_aimMarker.MaterialOverride!).AlbedoColor =
+            hit ? new Color(0, 1, 0) : new Color(1, 1, 0);
     }
 
     private void SpawnBullet()
@@ -102,7 +138,6 @@ public partial class Player : CharacterBody3D
 
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
         if (result.Count == 0) return;
-
         if (result["collider"].AsGodotObject() is Target target)
             target.TakeDamage(WeaponDamage);
     }
@@ -110,7 +145,7 @@ public partial class Player : CharacterBody3D
     public override void _PhysicsProcess(double delta)
     {
         float dt = (float)delta;
-        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 1.5f;
+        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
 
         Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
