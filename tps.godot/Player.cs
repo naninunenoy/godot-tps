@@ -117,7 +117,7 @@ public partial class Player : CharacterBody3D
         var bullet = BulletScene.Instantiate<Node3D>();
         GetTree().CurrentScene.AddChild(bullet);
         var forward = -_camera.GlobalBasis.Z;
-        bullet.GlobalPosition = _cameraPivot.GlobalPosition + forward * 0.5f;
+        bullet.GlobalPosition = GlobalPosition + Vector3.Up * 1.3f + forward * 0.5f;
         bullet.GlobalBasis = _camera.GlobalBasis;
         _logger.LogDebug("Bullet spawned");
     }
