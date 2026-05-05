@@ -19,7 +19,6 @@ public partial class Target : StaticBody3D
     private readonly CompositeDisposable _disposables = new();
 
     private static readonly Color AliveColor = new(0.9f, 0.3f, 0.1f);
-    private static readonly Color DeadColor = new(0.3f, 0.3f, 0.3f);
 
     public override void _Ready()
     {
@@ -53,7 +52,7 @@ public partial class Target : StaticBody3D
 
     private void OnDied()
     {
-        SetDeadAppearance();
+        _mesh.Visible = false;
         _collision.Disabled = true;
         _respawnTimer.Start();
         _logger.LogDebug("Target destroyed, respawn in {Delay}s", RespawnDelay);
@@ -62,6 +61,7 @@ public partial class Target : StaticBody3D
     private void Respawn()
     {
         _health.Reset();
+        _mesh.Visible = true;
         SetAliveAppearance();
         _collision.Disabled = false;
         _logger.LogDebug("Target respawned");
@@ -70,12 +70,6 @@ public partial class Target : StaticBody3D
     private void SetAliveAppearance()
     {
         var mat = new StandardMaterial3D { AlbedoColor = AliveColor };
-        _mesh.SetSurfaceOverrideMaterial(0, mat);
-    }
-
-    private void SetDeadAppearance()
-    {
-        var mat = new StandardMaterial3D { AlbedoColor = DeadColor };
         _mesh.SetSurfaceOverrideMaterial(0, mat);
     }
 }
