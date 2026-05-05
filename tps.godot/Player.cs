@@ -49,7 +49,7 @@ public partial class Player : CharacterBody3D
         {
             _cameraPivot.RotateY(-motion.Relative.X * MouseSensitivity);
             var rot = _springArm.Rotation;
-            rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -1.2f, 0f);
+            rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -1.2f, 0.8f);
             _springArm.Rotation = rot;
         }
         if (@event is InputEventKey { Keycode: Key.Escape, Pressed: true })
@@ -80,7 +80,9 @@ public partial class Player : CharacterBody3D
         if (BulletScene == null) return;
         var bullet = BulletScene.Instantiate<Node3D>();
         GetTree().CurrentScene.AddChild(bullet);
-        bullet.GlobalTransform = _camera.GlobalTransform;
+        var forward = -_camera.GlobalBasis.Z;
+        bullet.GlobalPosition = _cameraPivot.GlobalPosition + forward * 0.5f;
+        bullet.GlobalBasis = _camera.GlobalBasis;
         _logger.LogDebug("Bullet spawned");
     }
 
