@@ -6,6 +6,13 @@
 bin/
 obj/
 
+# IDE metadata
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+
 # Windows
 Thumbs.db
 Thumbs.db:encryptable
