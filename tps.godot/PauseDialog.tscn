@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://PauseDialog.cs" id="1_script"]
+
+[node name="PauseDialog" type="Control"]
+script = ExtResource("1_script")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+process_mode = 3
+mouse_filter = 0
+visible = false
+
+[node name="Overlay" type="ColorRect" parent="." unique_id=358490823]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.5)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1229594115]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=1446029288]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 0)
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=874636622]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=1128646825]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="Center/Panel/Margin/VBox" unique_id=1502941257]
+layout_mode = 2
+text = "ゲームを終了しますか？"
+horizontal_alignment = 1
+
+[node name="HBox" type="HBoxContainer" parent="Center/Panel/Margin/VBox" unique_id=943442126]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResumeButton" type="Button" parent="Center/Panel/Margin/VBox/HBox" unique_id=640957761]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "戻る"
+
+[node name="QuitButton" type="Button" parent="Center/Panel/Margin/VBox/HBox" unique_id=370385623]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "終了"

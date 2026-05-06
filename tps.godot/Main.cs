@@ -22,8 +22,7 @@ public partial class Main : Node3D
         ProcessMode = ProcessModeEnum.Always;
         _subscription = this.MapTo(GameRouter.Default);
 
-        _pauseDialog = new PauseDialog();
-        GetNode<CanvasLayer>("HudLayer").AddChild(_pauseDialog);
+        _pauseDialog = GetNode<PauseDialog>("HudLayer/PauseDialog");
 
         _logger.LogDebug("Main ready");
     }
