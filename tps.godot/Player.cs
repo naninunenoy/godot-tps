@@ -5,6 +5,7 @@ using tps.contract;
 using tps.csharp;
 using tps.Logging;
 using VitalRouter;
+using SN = System.Numerics;
 
 namespace tps;
 
@@ -147,45 +148,32 @@ public partial class Player : CharacterBody3D
         float dt = (float)delta;
         _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
 
-        Vector2 inputDir = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
+        Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
-        Vector3 camForward = -_cameraPivot.GlobalBasis.Z;
-        camForward.Y = 0;
-        if (!camForward.IsZeroApprox()) camForward = camForward.Normalized();
+        var camFwdGodot = -_cameraPivot.GlobalBasis.Z;
+        camFwdGodot.Y = 0;
+        if (!camFwdGodot.IsZeroApprox()) camFwdGodot = camFwdGodot.Normalized();
+        var camRightGodot = _cameraPivot.GlobalBasis.X;
+        camRightGodot.Y = 0;
+        if (!camRightGodot.IsZeroApprox()) camRightGodot = camRightGodot.Normalized();
 
-        Vector3 camRight = _cameraPivot.GlobalBasis.X;
-        camRight.Y = 0;
-        if (!camRight.IsZeroApprox()) camRight = camRight.Normalized();
+        bool jumpPressed = Input.IsActionJustPressed("jump");
+        if (IsOnFloor() && jumpPressed) _logger.LogDebug("Jump");
 
-        Vector3 moveDir = camForward * -inputDir.Y + camRight * inputDir.X;
-        if (moveDir.LengthSquared() > 0.01f)
-            moveDir = moveDir.Normalized();
+        var newVel = PlayerMovement.CalcVelocity(
+            new SN.Vector2(inputDir2D.X, inputDir2D.Y),
+            new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
+            new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
+            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z),
+            IsOnFloor(), jumpPressed,
+            Speed, JumpVelocity, Gravity, dt);
 
-        var vel = Velocity;
+        var moveDirGodot = camFwdGodot * -inputDir2D.Y + camRightGodot * inputDir2D.X;
+        if (moveDirGodot.LengthSquared() > 0.01f)
+            _body.Basis = _body.Basis.Slerp(
+                Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up), dt * 10f);
 
-        if (IsOnFloor() && Input.IsActionJustPressed("jump"))
-        {
-            vel.Y = JumpVelocity;
-            _logger.LogDebug("Jump");
-        }
-
-        if (moveDir != Vector3.Zero)
-        {
-            vel.X = moveDir.X * Speed;
-            vel.Z = moveDir.Z * Speed;
-            _body.Basis = _body.Basis.Slerp(Basis.LookingAt(moveDir, Vector3.Up), dt * 10f);
-            _logger.LogDebug("move dir={Dir} vel=({X:F2}, {Z:F2})", moveDir, vel.X, vel.Z);
-        }
-        else
-        {
-            vel.X = Mathf.MoveToward(vel.X, 0f, Speed);
-            vel.Z = Mathf.MoveToward(vel.Z, 0f, Speed);
-        }
-
-        if (!IsOnFloor())
-            vel.Y -= Gravity * dt;
-
-        Velocity = vel;
+        Velocity = new Vector3(newVel.X, newVel.Y, newVel.Z);
         MoveAndSlide();
     }
 }

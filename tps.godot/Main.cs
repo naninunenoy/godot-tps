@@ -11,7 +11,7 @@ namespace tps;
 [Routes]
 public partial class Main : Node3D
 {
-    private readonly KillCounter _killCounter = new();
+    private readonly KillCounter _killCounter = new(GameRouter.Default);
     private readonly ILogger<Main> _logger = AppLogger.For<Main>();
     private IDisposable? _subscription;
     private PauseDialog _pauseDialog = null!;
