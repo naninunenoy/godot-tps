@@ -1,14 +1,14 @@
 using Godot;
 using Microsoft.Extensions.Logging;
+using tps.contract;
+using tps.csharp;
 using tps.Logging;
+using VitalRouter;
 
 namespace tps;
 
 public partial class PauseDialog : Control
 {
-    [Signal] public delegate void ResumedEventHandler();
-    [Signal] public delegate void QuitRequestedEventHandler();
-
     private readonly ILogger<PauseDialog> _logger = AppLogger.For<PauseDialog>();
 
     public override void _Ready()
@@ -54,7 +54,7 @@ public partial class PauseDialog : Control
         resumeBtn.Pressed += () =>
         {
             _logger.LogDebug("PauseDialog: resume");
-            EmitSignal(SignalName.Resumed);
+            _ = GameRouter.Default.PublishAsync(new GameResumeRequestedCommand());
         };
         hbox.AddChild(resumeBtn);
 
@@ -62,7 +62,7 @@ public partial class PauseDialog : Control
         quitBtn.Pressed += () =>
         {
             _logger.LogDebug("PauseDialog: quit");
-            EmitSignal(SignalName.QuitRequested);
+            _ = GameRouter.Default.PublishAsync(new QuitRequestedCommand());
         };
         hbox.AddChild(quitBtn);
 

@@ -1,14 +1,15 @@
 using Godot;
 using Microsoft.Extensions.Logging;
 using R3;
+using tps.contract;
 using tps.csharp;
 using tps.Logging;
+using VitalRouter;
 
 namespace tps;
 
 public partial class Target : StaticBody3D
 {
-    [Signal] public delegate void DestroyedEventHandler();
     [Export] public int MaxHp = 3;
     [Export] public float RespawnDelay = 3f;
 
@@ -56,7 +57,7 @@ public partial class Target : StaticBody3D
         _mesh.Visible = false;
         _collision.Disabled = true;
         _respawnTimer.Start();
-        EmitSignal(SignalName.Destroyed);
+        _ = GameRouter.Default.PublishAsync(new TargetDestroyedCommand { TargetName = Name });
         _logger.LogDebug("Target destroyed, respawn in {Delay}s", RespawnDelay);
     }
 

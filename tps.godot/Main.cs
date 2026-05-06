@@ -1,41 +1,36 @@
-using System.Linq;
+using System;
 using Godot;
 using Microsoft.Extensions.Logging;
+using tps.contract;
 using tps.csharp;
 using tps.Logging;
+using VitalRouter;
 
 namespace tps;
 
+[Routes]
 public partial class Main : Node3D
 {
     private readonly KillCounter _killCounter = new();
     private readonly ILogger<Main> _logger = AppLogger.For<Main>();
+    private IDisposable? _subscription;
     private PauseDialog _pauseDialog = null!;
-    private Player _player = null!;
+    private bool _isPaused;
 
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
-        GD.Print("main ready");
-
-        _player = GetNode<Player>("Player");
-
-        var hud = GetNode<Hud>("HudLayer/Hud");
-        hud.SetKillCounter(_killCounter);
+        _subscription = this.MapTo(GameRouter.Default);
 
         _pauseDialog = new PauseDialog();
         GetNode<CanvasLayer>("HudLayer").AddChild(_pauseDialog);
-        _pauseDialog.Resumed += Resume;
-        _pauseDialog.QuitRequested += () => GetTree().Quit();
 
-        foreach (var target in GetChildren().OfType<Target>())
-        {
-            target.Destroyed += _killCounter.Increment;
-        }
+        _logger.LogDebug("Main ready");
     }
 
     public override void _ExitTree()
     {
+        _subscription?.Dispose();
         _killCounter.Dispose();
     }
 
@@ -43,28 +38,34 @@ public partial class Main : Node3D
     {
         if (@event is not InputEventKey { Keycode: Key.Escape, Pressed: true }) return;
 
-        if (_pauseDialog.Visible)
-            Resume();
+        if (_isPaused)
+            _ = GameRouter.Default.PublishAsync(new GameResumeRequestedCommand());
         else
-            Pause();
+            _ = GameRouter.Default.PublishAsync(new GamePauseRequestedCommand());
     }
 
-    private void Pause()
+    [Route]
+    public void On(GamePauseRequestedCommand cmd)
     {
+        _isPaused = true;
         _pauseDialog.Visible = true;
         GetTree().Paused = true;
         Input.MouseMode = Input.MouseModeEnum.Visible;
         _logger.LogDebug("Game paused");
     }
 
-    private void Resume()
+    [Route]
+    public void On(GameResumeRequestedCommand cmd)
     {
+        _isPaused = false;
         _pauseDialog.Visible = false;
         GetTree().Paused = false;
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogDebug("Game resumed");
     }
 
-    public override void _Process(double delta)
-    { }
+    [Route]
+    public void On(QuitRequestedCommand cmd) => GetTree().Quit();
+
+    public override void _Process(double delta) { }
 }

@@ -8,6 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="R3" Version="1.3.0" />
+    <PackageReference Include="VitalRouter" Version="2.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
   </ItemGroup>
 
 </Project>
