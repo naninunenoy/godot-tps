@@ -26,7 +26,6 @@ public partial class Player : CharacterBody3D
     MeshInstance3D? _aimMarker;
 
     readonly WeaponState _weapon = new(30, 2f, 0.1f);
-    bool _isGameMode = true;
 
     public override void _Ready()
     {
@@ -71,11 +70,6 @@ public partial class Player : CharacterBody3D
             rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -1.2f, 0.8f);
             _springArm.Rotation = rot;
         }
-        if (@event is InputEventKey { Keycode: Key.Escape, Pressed: true })
-        {
-            _isGameMode = false;
-            Input.MouseMode = Input.MouseModeEnum.Visible;
-        }
         if (@event.IsActionPressed("reload"))
         {
             if (_weapon.TryStartReload())
@@ -90,7 +84,7 @@ public partial class Player : CharacterBody3D
         if (_weapon.NeedsReload)
             _weapon.TryStartReload();
 
-        if (Input.IsActionPressed("fire") && _isGameMode)
+        if (Input.IsActionPressed("fire"))
             TryFire();
 
         if (ShowRaycastDebug && _aimMarker != null)
