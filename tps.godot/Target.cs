@@ -8,6 +8,7 @@ namespace tps;
 
 public partial class Target : StaticBody3D
 {
+    [Signal] public delegate void DestroyedEventHandler();
     [Export] public int MaxHp = 3;
     [Export] public float RespawnDelay = 3f;
 
@@ -55,6 +56,7 @@ public partial class Target : StaticBody3D
         _mesh.Visible = false;
         _collision.Disabled = true;
         _respawnTimer.Start();
+        EmitSignal(SignalName.Destroyed);
         _logger.LogDebug("Target destroyed, respawn in {Delay}s", RespawnDelay);
     }
 
