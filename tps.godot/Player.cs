@@ -11,24 +11,19 @@ namespace tps;
 
 public partial class Player : CharacterBody3D
 {
-    [Export] public float Speed = 5f;
-    [Export] public float MouseSensitivity = 0.003f;
-    [Export] public float JumpVelocity = 5f;
     [Export] public int WeaponDamage = 1;
     [Export] public PackedScene BulletScene = null!;
     [Export] public bool ShowRaycastDebug = true;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
-
-    const float Gravity = 9.8f;
+    private readonly WeaponState _weapon = new(30, 2f, 0.1f);
+    private readonly PlayerController _controller = new(GameRouter.Default, new PlayerSettings());
 
     Node3D _cameraPivot = null!;
     SpringArm3D _springArm = null!;
     MeshInstance3D _body = null!;
     Camera3D _camera = null!;
     MeshInstance3D? _aimMarker;
-
-    readonly WeaponState _weapon = new(30, 2f, 0.1f);
 
     public override void _Ready()
     {
@@ -62,15 +57,17 @@ public partial class Player : CharacterBody3D
     public override void _ExitTree()
     {
         _weapon.Dispose();
+        _controller.Dispose();
     }
 
     public override void _Input(InputEvent @event)
     {
         if (@event is InputEventMouseMotion motion)
         {
-            _cameraPivot.RotateY(-motion.Relative.X * MouseSensitivity);
+            var (yawDelta, pitch) = _controller.CalcCameraAim(motion.Relative.X, motion.Relative.Y);
+            _cameraPivot.RotateY(yawDelta);
             var rot = _springArm.Rotation;
-            rot.X = Mathf.Clamp(rot.X - motion.Relative.Y * MouseSensitivity, -1.2f, 0.8f);
+            rot.X = pitch;
             _springArm.Rotation = rot;
         }
         if (@event.IsActionPressed("reload"))
@@ -160,20 +157,22 @@ public partial class Player : CharacterBody3D
         bool jumpPressed = Input.IsActionJustPressed("jump");
         if (IsOnFloor() && jumpPressed) _logger.LogDebug("Jump");
 
-        var newVel = PlayerMovement.CalcVelocity(
+        var newVel = _controller.CalcMovement(
             new SN.Vector2(inputDir2D.X, inputDir2D.Y),
             new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
             new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
-            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z),
-            IsOnFloor(), jumpPressed,
-            Speed, JumpVelocity, Gravity, dt);
+            IsOnFloor(), jumpPressed, dt);
 
         var moveDirGodot = camFwdGodot * -inputDir2D.Y + camRightGodot * inputDir2D.X;
         if (moveDirGodot.LengthSquared() > 0.01f)
             _body.Basis = _body.Basis.Slerp(
-                Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up), dt * 10f);
+                Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up),
+                dt * _controller.Settings.BodyRotationSpeed);
 
         Velocity = new Vector3(newVel.X, newVel.Y, newVel.Z);
         MoveAndSlide();
+
+        // コリジョン解決後の実速度を C# 側にフィードバック
+        _controller.FeedbackVelocity(new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z));
     }
 }
