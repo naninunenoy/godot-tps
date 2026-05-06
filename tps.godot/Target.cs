@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Microsoft.Extensions.Logging;
 using R3;
@@ -8,6 +9,7 @@ using VitalRouter;
 
 namespace tps;
 
+[Routes]
 public partial class Target : StaticBody3D
 {
     [Export] public int MaxHp = 3;
@@ -19,6 +21,7 @@ public partial class Target : StaticBody3D
     private Timer _respawnTimer = null!;
     private readonly ILogger<Target> _logger = AppLogger.For<Target>();
     private readonly CompositeDisposable _disposables = new();
+    private IDisposable? _routeSubscription;
 
     private static readonly Color AliveColor = new(0.9f, 0.3f, 0.1f);
 
@@ -36,16 +39,25 @@ public partial class Target : StaticBody3D
         AddChild(_respawnTimer);
 
         SetAliveAppearance();
+        _routeSubscription = this.MapTo(GameRouter.Default);
         _logger.LogDebug("Target ready hp={MaxHp}", MaxHp);
     }
 
     public override void _ExitTree()
     {
+        _routeSubscription?.Dispose();
         _disposables.Dispose();
         _health.Dispose();
     }
 
-    public void TakeDamage(int damage)
+    [Route]
+    public void On(TargetHitCommand cmd)
+    {
+        if (cmd.TargetName != Name) return;
+        TakeDamage(cmd.Damage);
+    }
+
+    private void TakeDamage(int damage)
     {
         if (!_health.IsAlive) return;
         _health.TakeDamage(damage);
@@ -67,7 +79,8 @@ public partial class Target : StaticBody3D
         _mesh.Visible = true;
         SetAliveAppearance();
         _collision.Disabled = false;
-        _logger.LogDebug("Target respawned");
+        _ = GameRouter.Default.PublishAsync(new TargetRespawnedCommand { TargetName = Name });
+        _logger.LogDebug("Target respawned name={Name}", Name);
     }
 
     private void SetAliveAppearance()

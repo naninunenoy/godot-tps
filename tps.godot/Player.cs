@@ -1,8 +1,10 @@
 using Godot;
 using Microsoft.Extensions.Logging;
 using R3;
+using tps.contract;
 using tps.csharp;
 using tps.Logging;
+using VitalRouter;
 
 namespace tps;
 
@@ -119,6 +121,7 @@ public partial class Player : CharacterBody3D
     private void TryFire()
     {
         if (!_weapon.TryFire()) return;
+        _ = GameRouter.Default.PublishAsync(new ShotFiredCommand { AmmoLeft = _weapon.CurrentAmmo.CurrentValue });
         _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo.CurrentValue, _weapon.MagazineSize);
 
         SpawnBullet();
@@ -133,7 +136,10 @@ public partial class Player : CharacterBody3D
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
         if (result.Count == 0) return;
         if (result["collider"].AsGodotObject() is Target target)
-            target.TakeDamage(WeaponDamage);
+        {
+            _ = GameRouter.Default.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage });
+            _logger.LogDebug("Hit target={Name} damage={Damage}", target.Name, WeaponDamage);
+        }
     }
 
     public override void _PhysicsProcess(double delta)
