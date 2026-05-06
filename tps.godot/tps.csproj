@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\tps.csharp\tps.csharp.csproj" />
+    <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
   </ItemGroup>
 </Project>

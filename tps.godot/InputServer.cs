@@ -5,22 +5,22 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
+using tps.contract;
 
 public partial class InputServer : Node
 {
     private readonly TcpServer _tcpServer = new();
-    private const int Port = 9876;
 
     public override void _Ready()
     {
         if (!OS.IsDebugBuild())
             return;
 
-        var err = _tcpServer.Listen(Port);
+        var err = _tcpServer.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
-            GD.PrintErr($"[InputServer] Failed to listen on port {Port}: {err}");
+            GD.PrintErr($"[InputServer] Failed to listen on port {InputEndpoints.Port}: {err}");
         else
-            GD.Print($"[InputServer] Listening on port {Port}");
+            GD.Print($"[InputServer] Listening on port {InputEndpoints.Port}");
     }
 
     public override void _ExitTree()
@@ -41,28 +41,28 @@ public partial class InputServer : Node
             var (method, path, body) = await ReadRequestAsync(peer);
             GD.PrintRich($"[InputServer] {method} {path}");
 
-            if (method == "GET" && path == "/ping")
+            if (method == "GET" && path == InputEndpoints.Ping)
             {
-                SendResponse(peer, 200, "pong");
+                SendJsonResponse(peer, 200, new PingResponse("pong"));
             }
-            else if (method == "GET" && path == "/actions")
+            else if (method == "GET" && path == InputEndpoints.Actions)
             {
                 var actions = InputMap.GetActions().Select(a => a.ToString()).ToArray();
-                SendResponse(peer, 200, JsonSerializer.Serialize(actions));
+                SendJsonResponse(peer, 200, new GetActionsResponse(actions));
             }
-            else if (method == "POST" && path == "/press_action")
+            else if (method == "POST" && path == InputEndpoints.PressAction)
             {
-                var result = await HandlePressActionAsync(body);
-                SendResponse(peer, 200, result);
+                var response = await HandlePressActionAsync(body);
+                SendJsonResponse(peer, 200, response);
             }
-            else if (method == "GET" && path == "/screenshot")
+            else if (method == "GET" && path == InputEndpoints.Screenshot)
             {
                 var imageBytes = await HandleScreenshotAsync();
                 SendBinaryResponse(peer, 200, imageBytes, "image/png");
             }
             else
             {
-                SendResponse(peer, 404, $"not found: {path}");
+                SendTextResponse(peer, 404, $"not found: {path}");
             }
         }
         catch (Exception ex)
@@ -138,22 +138,21 @@ public partial class InputServer : Node
         return (method, path, Encoding.UTF8.GetString(bodyBytes.Take(contentLength).ToArray()));
     }
 
-    private async Task<string> HandlePressActionAsync(string body)
+    private async Task<PressActionResponse> HandlePressActionAsync(string body)
     {
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
-        var action = root.GetProperty("action").GetString() ?? "";
-        var durationMs = root.TryGetProperty("durationMs", out var d) ? d.GetInt32() : 100;
+        var request = JsonSerializer.Deserialize<PressActionRequest>(body);
+        if (request is null || string.IsNullOrEmpty(request.Action))
+            return new PressActionResponse(false, "invalid request");
 
-        if (!InputMap.HasAction(action))
-            return $"unknown action: {action}";
+        if (!InputMap.HasAction(request.Action))
+            return new PressActionResponse(false, $"unknown action: {request.Action}");
 
-        GD.Print($"[InputServer] ActionPress: {action} ({durationMs}ms)");
-        Input.ActionPress(action);
-        await ToSignal(GetTree().CreateTimer(durationMs / 1000.0), SceneTreeTimer.SignalName.Timeout);
-        Input.ActionRelease(action);
+        GD.Print($"[InputServer] ActionPress: {request.Action} ({request.DurationMs}ms)");
+        Input.ActionPress(request.Action);
+        await ToSignal(GetTree().CreateTimer(request.DurationMs / 1000.0), SceneTreeTimer.SignalName.Timeout);
+        Input.ActionRelease(request.Action);
 
-        return $"pressed {action} for {durationMs}ms";
+        return new PressActionResponse(true, $"pressed {request.Action} for {request.DurationMs}ms");
     }
 
     private async Task<byte[]> HandleScreenshotAsync()
@@ -165,15 +164,25 @@ public partial class InputServer : Node
         return pngBytes;
     }
 
-    private static void SendResponse(StreamPeerTcp peer, int status, string body)
+    private static void SendJsonResponse<T>(StreamPeerTcp peer, int status, T payload)
     {
-        var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
+        var json = JsonSerializer.Serialize(payload);
+        var bodyBytes = Encoding.UTF8.GetBytes(json);
+        WriteResponse(peer, status, bodyBytes, "application/json; charset=utf-8");
+    }
+
+    private static void SendTextResponse(StreamPeerTcp peer, int status, string body)
+    {
         var bodyBytes = Encoding.UTF8.GetBytes(body);
-        var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
-        peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+        WriteResponse(peer, status, bodyBytes, "text/plain; charset=utf-8");
     }
 
     private static void SendBinaryResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    {
+        WriteResponse(peer, status, bodyBytes, contentType);
+    }
+
+    private static void WriteResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
     {
         var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
         var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
