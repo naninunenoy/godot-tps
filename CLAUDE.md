@@ -14,14 +14,70 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 | `tps.godot/` | Godot プロジェクト本体。Node・シーン・物理など Godot 依存コード |
 | `tps.csharp/` | 純粋 C# クラスライブラリ。Godot 非依存のゲームロジック |
 | `tps.csharp.test/` | `tps.csharp` の単体テスト（xUnit + Shouldly） |
+| `tps.contract/` | コマンド定義など共有型 |
+| `tps.mcp/` | MCP サーバー。ゲームへのコマンド投入・状態取得 |
 
-### アーキテクチャルール
+## アーキテクチャ
 
-- **Godot に依存しないロジックは最大限 `tps.csharp` に実装する**
-  - ダメージ計算・AI ステート・弾薬管理・スコアなどのゲームロジックはここ
-  - `Node` / `GodotObject` を継承しない純粋な C# クラスとして書く
-- `tps.godot` の Node クラスは `tps.csharp` のロジッククラスを薄くラップするだけにとどめる（Humble Object パターン）
-- `tps.csharp` は net8.0 を維持すること（`tps.godot` が net8.0 のため）
+### レイヤー構成
+
+```
+外部エージェント / テスト
+        ↓ MCP コマンド
+   tps.mcp (godot-ext)
+        ↓
+   tps.godot (薄いシェル)  ← Godot 依存処理のみ
+        ↓ interface
+   tps.csharp (ロジック)   ← Godot 非依存、テスト可能
+```
+
+### tps.godot の責務
+
+- インテグレーション・アプリ起動・物理/衝突判定・プラットフォーム依存処理
+- **DI ルート**：`Main.cs` が全依存を生成・配線する
+- **Game API の実装**：シーン状態の公開とコマンドの受付
+
+### tps.csharp の責務（ECS ライク）
+
+- **Component**：純粋データ（`HealthComponent`、`WeaponComponent`、`TransformComponent` 等）
+- **System**：Component を処理するロジック（Godot 非依存、xUnit でテスト可能）
+- **World**：EntityId → Component のデータ置き場
+
+`tps.csharp` は Godot に依存しない。Godot との境界は interface 経由のみ。
+
+### CQRS：書き込みと読み取りの分離
+
+| 操作 | 経路 |
+|---|---|
+| Godot → World 書き込み | コマンド経由 |
+| Godot → World 読み取り | `World.GetComponent<T>()` 直接（毎フレーム） |
+| 外部 → World 書き込み | コマンド経由（MCP・テストも同じ口） |
+| 外部 → World 読み取り | `ISceneQuery` 経由 |
+
+### コマンド設計
+
+- コマンドは**プレイヤー・システムの意図**で切る（UI の実装詳細を含めない）
+- 対象の階層：System レベル / Scene レベル / Object レベル
+- 実行可能なコマンドは現在のシーンが管理し、`IGameApi` 経由で公開する
+- MCP はコマンドを叩く一形態。ゲーム内部も同じ口を使う
+
+### EntityId
+
+- `UnitGenerator` で生成した強型 `EntityId`（基底型は `string`）
+- ID 採番ロジックは `IIdGenerator` で抽象化し差し替え可能
+
+## ロギング・状態公開
+
+| 用途 | フォーマット |
+|---|---|
+| xUnit テスト（インプロセス） | オブジェクトそのまま |
+| MCP → LLM エージェント | ToonEncoder（トークン節約） |
+| プロセス間ログ転送 | MessagePack（サイズ効率） |
+| デバッグ確認・ファイル | JSONL（人間が読める） |
+
+- ログは文字列でなく**構造化ログストア**（型付きイベントレコード）で管理する
+- テストでは「コマンド送信後に期待するログイベントが記録されているか」をアサートする
+- エラーレベル以上のログが出ていないことも共通アサートとして入れる
 
 ## 開発ルール
 
@@ -43,8 +99,3 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 ## godot-mcp の使用ルール
 
 - `.tscn` / `.tres` などの Godot リソースファイルの情報取得・編集には godot-mcp ツールを使う（直接ファイル編集しない）
-
-## ロギング方針
-
-- 実装時にあらかじめ `_logger.LogDebug(...)` で動作確認に役立つログを入れておく
-- godot-mcp 経由で起動したプロセスのみ `get_debug_output` で取得できる（エディタから手動起動したプロセスは取得不可）
