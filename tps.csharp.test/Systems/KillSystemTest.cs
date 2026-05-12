@@ -56,4 +56,17 @@ public class KillSystemTest
         await router.PublishAsync(new TargetDestroyedCommand { TargetName = "target#2" });
         system.KillCount.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task OnTargetDestroyed_LogsKillCountChanged()
+    {
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        using var system = new KillSystem(router, logStore);
+
+        await router.PublishAsync(new TargetDestroyedCommand { TargetName = "target#1" });
+
+        logStore.HasEvent(GameEvents.KillCountChanged, p => (int?)p["Count"] == 1).ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
 }

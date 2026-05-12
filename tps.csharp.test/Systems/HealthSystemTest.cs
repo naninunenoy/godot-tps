@@ -73,4 +73,38 @@ public class HealthSystemTest
         hp.Hp.ShouldBe(50);
         hp.IsAlive.ShouldBeTrue();
     }
+
+    [Fact]
+    public void TakeDamage_LogsTargetHit()
+    {
+        var world = new World();
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        var system = new HealthSystem(world, router, logStore);
+        var id = new EntityId("target#1");
+        world.Register(id);
+        world.SetComponent(id, new HealthComponent(100, 100));
+
+        system.TakeDamage(id, 30);
+
+        logStore.HasEvent(GameEvents.TargetHit, p => (string?)p["EntityId"] == "target#1").ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void TakeDamageToZero_LogsTargetDestroyed()
+    {
+        var world = new World();
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        var system = new HealthSystem(world, router, logStore);
+        var id = new EntityId("target#1");
+        world.Register(id);
+        world.SetComponent(id, new HealthComponent(10, 10));
+
+        system.TakeDamage(id, 10);
+
+        logStore.HasEvent(GameEvents.TargetDestroyed).ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
 }

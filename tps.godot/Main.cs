@@ -16,6 +16,7 @@ public partial class Main : Node3D, ISceneQuery
     private Router _router = null!;
     private World _world = null!;
     private IIdGenerator _idGenerator = null!;
+    private InMemoryLogStore _logStore = null!;
     private KillSystem _killSystem = null!;
     private HealthSystem _healthSystem = null!;
     private WeaponSystem _weaponSystem = null!;
@@ -44,11 +45,12 @@ public partial class Main : Node3D, ISceneQuery
         _router = new Router();
         _world = new World();
         _idGenerator = new SequentialIdGenerator();
+        _logStore = new InMemoryLogStore();
 
         // Systems
-        _killSystem = new KillSystem(_router);
-        _healthSystem = new HealthSystem(_world, _router);
-        _weaponSystem = new WeaponSystem(_world, _router);
+        _killSystem = new KillSystem(_router, _logStore);
+        _healthSystem = new HealthSystem(_world, _router, _logStore);
+        _weaponSystem = new WeaponSystem(_world, _router, _logStore);
         _movementSystem = new MovementSystem(_world);
 
         // Player

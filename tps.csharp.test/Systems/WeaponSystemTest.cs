@@ -92,4 +92,56 @@ public class WeaponSystemTest
         system.Update(id, 0.05f);
         world.GetComponent<WeaponComponent>(id)!.FireCooldown.ShouldBe(0.05f, tolerance: 0.001f);
     }
+
+    [Fact]
+    public void TryFire_LogsShotFired()
+    {
+        var world = new World();
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        var system = new WeaponSystem(world, router, logStore);
+        var id = new EntityId("player#1");
+        world.Register(id);
+        world.SetComponent(id, new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
+
+        system.TryFire(id);
+
+        logStore.HasEvent(GameEvents.ShotFired, p => (int?)p["AmmoLeft"] == 29).ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void TryStartReload_LogsReloadStarted()
+    {
+        var world = new World();
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        var system = new WeaponSystem(world, router, logStore);
+        var id = new EntityId("player#1");
+        world.Register(id);
+        world.SetComponent(id, new WeaponComponent(10, 30, 0f, 0f, 2f, 0.1f));
+
+        system.TryStartReload(id);
+
+        logStore.HasEvent(GameEvents.ReloadStarted).ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void UpdateCompletesReload_LogsReloadCompleted()
+    {
+        var world = new World();
+        var router = new Router();
+        var logStore = new InMemoryLogStore();
+        var system = new WeaponSystem(world, router, logStore);
+        var id = new EntityId("player#1");
+        world.Register(id);
+        world.SetComponent(id, new WeaponComponent(10, 30, 0f, 0f, 2f, 0.1f));
+
+        system.TryStartReload(id);
+        system.Update(id, 2.1f);
+
+        logStore.HasEvent(GameEvents.ReloadCompleted, p => (int?)p["Ammo"] == 30).ShouldBeTrue();
+        logStore.Errors.ShouldBeEmpty();
+    }
 }
