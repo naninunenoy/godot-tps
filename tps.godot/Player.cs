@@ -1,6 +1,5 @@
 using Godot;
 using Microsoft.Extensions.Logging;
-using R3;
 using tps.contract;
 using tps.csharp;
 using tps.Logging;
@@ -16,14 +15,18 @@ public partial class Player : CharacterBody3D
     [Export] public bool ShowRaycastDebug = true;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
-    private readonly WeaponState _weapon = new(30, 2f, 0.1f);
-    private readonly PlayerController _controller = new(GameRouter.Default, new PlayerSettings());
 
-    Node3D _cameraPivot = null!;
-    SpringArm3D _springArm = null!;
-    MeshInstance3D _body = null!;
-    Camera3D _camera = null!;
-    MeshInstance3D? _aimMarker;
+    private Entity _entity = null!;
+    private WeaponSystem _weaponSystem = null!;
+    private MovementSystem _movementSystem = null!;
+    private Router _router = null!;
+    private PlayerController _controller = null!;
+
+    private Node3D _cameraPivot = null!;
+    private SpringArm3D _springArm = null!;
+    private MeshInstance3D _body = null!;
+    private Camera3D _camera = null!;
+    private MeshInstance3D? _aimMarker;
 
     public override void _Ready()
     {
@@ -33,7 +36,6 @@ public partial class Player : CharacterBody3D
         _camera = GetNode<Camera3D>("CameraPivot/SpringArm3D/Camera3D");
         _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
         _springArm.AddExcludedObject(GetRid());
-        Input.MouseMode = Input.MouseModeEnum.Captured;
 
         if (ShowRaycastDebug)
         {
@@ -50,18 +52,33 @@ public partial class Player : CharacterBody3D
             };
             AddChild(_aimMarker);
         }
+    }
 
+    public void Initialize(
+        Entity entity,
+        WeaponSystem weaponSystem,
+        MovementSystem movementSystem,
+        Router router,
+        PlayerSettings settings)
+    {
+        _entity = entity;
+        _weaponSystem = weaponSystem;
+        _movementSystem = movementSystem;
+        _router = router;
+        _controller = new PlayerController(router, settings);
+        Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
     }
 
     public override void _ExitTree()
     {
-        _weapon.Dispose();
-        _controller.Dispose();
+        _controller?.Dispose();
     }
 
     public override void _Input(InputEvent @event)
     {
+        if (_controller is null) return;
+
         if (@event is InputEventMouseMotion motion)
         {
             var (yawDelta, pitch) = _controller.CalcCameraAim(motion.Relative.X, motion.Relative.Y);
@@ -72,23 +89,71 @@ public partial class Player : CharacterBody3D
         }
         if (@event.IsActionPressed("reload"))
         {
-            if (_weapon.TryStartReload())
-                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", _weapon.CurrentAmmo.CurrentValue, _weapon.MagazineSize);
+            if (_weaponSystem.TryStartReload(_entity.Id))
+            {
+                var w = _entity.Get<WeaponComponent>();
+                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", w?.Ammo, w?.MagazineSize);
+            }
         }
     }
 
     public override void _Process(double delta)
     {
-        _weapon.Update((float)delta);
+        if (_entity is null) return;
 
-        if (_weapon.NeedsReload)
-            _weapon.TryStartReload();
+        _weaponSystem.Update(_entity.Id, (float)delta);
+
+        var weapon = _entity.Get<WeaponComponent>();
+        if (weapon?.NeedsReload == true)
+            _weaponSystem.TryStartReload(_entity.Id);
 
         if (Input.IsActionPressed("fire"))
             TryFire();
 
         if (ShowRaycastDebug && _aimMarker != null)
             UpdateAimMarker();
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        if (_entity is null) return;
+
+        float dt = (float)delta;
+        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
+
+        Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
+
+        var camFwdGodot = -_cameraPivot.GlobalBasis.Z;
+        camFwdGodot.Y = 0;
+        if (!camFwdGodot.IsZeroApprox()) camFwdGodot = camFwdGodot.Normalized();
+        var camRightGodot = _cameraPivot.GlobalBasis.X;
+        camRightGodot.Y = 0;
+        if (!camRightGodot.IsZeroApprox()) camRightGodot = camRightGodot.Normalized();
+
+        bool jumpPressed = Input.IsActionJustPressed("jump");
+        if (IsOnFloor() && jumpPressed) _logger.LogDebug("Jump");
+
+        _movementSystem.Update(_entity.Id,
+            new SN.Vector2(inputDir2D.X, inputDir2D.Y),
+            new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
+            new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
+            IsOnFloor(), jumpPressed, _controller.Settings, dt);
+
+        var transform = _entity.Get<TransformComponent>();
+        var vel = transform?.Velocity ?? SN.Vector3.Zero;
+
+        var moveDirGodot = camFwdGodot * -inputDir2D.Y + camRightGodot * inputDir2D.X;
+        if (moveDirGodot.LengthSquared() > 0.01f)
+            _body.Basis = _body.Basis.Slerp(
+                Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up),
+                dt * _controller.Settings.BodyRotationSpeed);
+
+        Velocity = new Vector3(vel.X, vel.Y, vel.Z);
+        MoveAndSlide();
+
+        _movementSystem.FeedbackTransform(_entity.Id,
+            new SN.Vector3(GlobalPosition.X, GlobalPosition.Y, GlobalPosition.Z),
+            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z));
     }
 
     private void UpdateAimMarker()
@@ -118,61 +183,24 @@ public partial class Player : CharacterBody3D
 
     private void TryFire()
     {
-        if (!_weapon.TryFire()) return;
-        _ = GameRouter.Default.PublishAsync(new ShotFiredCommand { AmmoLeft = _weapon.CurrentAmmo.CurrentValue });
-        _logger.LogDebug("Fire ammo={Ammo}/{Max}", _weapon.CurrentAmmo.CurrentValue, _weapon.MagazineSize);
+        if (!_weaponSystem.TryFire(_entity.Id)) return;
+
+        var w = _entity.Get<WeaponComponent>();
+        _logger.LogDebug("Fire ammo={Ammo}/{Max}", w?.Ammo, w?.MagazineSize);
 
         SpawnBullet();
 
         var origin = _camera.GlobalPosition;
         var direction = -_camera.GlobalBasis.Z;
         var end = origin + direction * 200f;
-
         var query = PhysicsRayQueryParameters3D.Create(origin, end);
         query.Exclude = [GetRid()];
-
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
         if (result.Count == 0) return;
         if (result["collider"].AsGodotObject() is Target target)
         {
-            _ = GameRouter.Default.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage });
+            _ = _router.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage });
             _logger.LogDebug("Hit target={Name} damage={Damage}", target.Name, WeaponDamage);
         }
-    }
-
-    public override void _PhysicsProcess(double delta)
-    {
-        float dt = (float)delta;
-        _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
-
-        Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
-
-        var camFwdGodot = -_cameraPivot.GlobalBasis.Z;
-        camFwdGodot.Y = 0;
-        if (!camFwdGodot.IsZeroApprox()) camFwdGodot = camFwdGodot.Normalized();
-        var camRightGodot = _cameraPivot.GlobalBasis.X;
-        camRightGodot.Y = 0;
-        if (!camRightGodot.IsZeroApprox()) camRightGodot = camRightGodot.Normalized();
-
-        bool jumpPressed = Input.IsActionJustPressed("jump");
-        if (IsOnFloor() && jumpPressed) _logger.LogDebug("Jump");
-
-        var newVel = _controller.CalcMovement(
-            new SN.Vector2(inputDir2D.X, inputDir2D.Y),
-            new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
-            new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
-            IsOnFloor(), jumpPressed, dt);
-
-        var moveDirGodot = camFwdGodot * -inputDir2D.Y + camRightGodot * inputDir2D.X;
-        if (moveDirGodot.LengthSquared() > 0.01f)
-            _body.Basis = _body.Basis.Slerp(
-                Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up),
-                dt * _controller.Settings.BodyRotationSpeed);
-
-        Velocity = new Vector3(newVel.X, newVel.Y, newVel.Z);
-        MoveAndSlide();
-
-        // コリジョン解決後の実速度を C# 側にフィードバック
-        _controller.FeedbackVelocity(new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z));
     }
 }

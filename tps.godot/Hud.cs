@@ -2,7 +2,6 @@ using System;
 using Godot;
 using Microsoft.Extensions.Logging;
 using tps.contract;
-using tps.csharp;
 using tps.Logging;
 using VitalRouter;
 
@@ -26,7 +25,11 @@ public partial class Hud : Control
         MouseFilter = MouseFilterEnum.Ignore;
         _killCountLabel = GetNode<Label>("KillCountLabel");
         _killCountLabel.Text = "Kills: 0";
-        _subscription = this.MapTo(GameRouter.Default);
+    }
+
+    public void Initialize(Router router)
+    {
+        _subscription = this.MapTo(router);
         _logger.LogDebug("Hud ready");
     }
 

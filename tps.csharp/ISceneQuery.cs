@@ -2,7 +2,7 @@ namespace tps.csharp;
 
 public interface ISceneQuery
 {
-    long FrameCount { get; }
+    ulong FrameCount { get; }
     int ObjectCount { get; }
     IReadOnlyList<IObjectSnapshot> Snapshot { get; }
 }
