@@ -9,4 +9,6 @@ public static class InputEndpoints
     public const string Actions = "/actions";
     public const string PressAction = "/press_action";
     public const string Screenshot = "/screenshot";
+    public const string State = "/state";
+    public const string Commands = "/commands";
 }

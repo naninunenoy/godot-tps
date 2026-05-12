@@ -6,10 +6,19 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using tps.contract;
+using tps.csharp;
 
 public partial class InputServer : Node
 {
     private readonly TcpServer _tcpServer = new();
+    private ISceneQuery? _sceneQuery;
+    private IScene? _scene;
+
+    public void Initialize(ISceneQuery sceneQuery, IScene scene)
+    {
+        _sceneQuery = sceneQuery;
+        _scene = scene;
+    }
 
     public override void _Ready()
     {
@@ -59,6 +68,21 @@ public partial class InputServer : Node
             {
                 var imageBytes = await HandleScreenshotAsync();
                 SendBinaryResponse(peer, 200, imageBytes, "image/png");
+            }
+            else if (method == "GET" && path == InputEndpoints.State)
+            {
+                if (_sceneQuery is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                    SendJsonResponse(peer, 200, BuildStateResponse());
+            }
+            else if (method == "GET" && path == InputEndpoints.Commands)
+            {
+                if (_scene is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                    SendJsonResponse(peer, 200, new CommandListResponse(
+                        _scene.AvailableCommands.Select(c => c.Name).ToArray()));
             }
             else
             {
@@ -187,5 +211,16 @@ public partial class InputServer : Node
         var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
         var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
         peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+    }
+
+    private GameStateResponse BuildStateResponse()
+    {
+        var objects = _sceneQuery!.Snapshot.Select(obj => new ObjectSnapshotDto(
+            obj.Id.AsPrimitive(),
+            obj.Name,
+            obj.GetComponent<HealthComponent>() is { } h ? new HealthDto(h.Hp, h.MaxHp) : null,
+            obj.GetComponent<WeaponComponent>() is { } w ? new WeaponDto(w.Ammo, w.MagazineSize, w.IsReloading) : null
+        )).ToArray();
+        return new GameStateResponse(_sceneQuery.FrameCount, _sceneQuery.ObjectCount, objects);
     }
 }

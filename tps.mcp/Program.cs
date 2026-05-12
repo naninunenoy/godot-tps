@@ -6,6 +6,7 @@ using tps.mcp;
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
-    .WithTools<InputSimulationTools>();
+    .WithTools<InputSimulationTools>()
+    .WithTools<GameStateTools>();
 
 await builder.Build().RunAsync();
