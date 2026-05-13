@@ -17,6 +17,9 @@ public class MovementSystemTest
 
     private static readonly PlayerSettings Settings = new();
 
+    /// <summary>
+    /// 前方入力でUpdateを呼ぶとTransformComponentのZ速度が正値（前方向）になること。
+    /// </summary>
     [Fact]
     public void UpdateChangesVelocityWithForwardInput()
     {
@@ -36,6 +39,9 @@ public class MovementSystemTest
         vel.Z.ShouldBeGreaterThan(0f);
     }
 
+    /// <summary>
+    /// 空中(isOnFloor=false)・delta=1fでUpdateを呼ぶとTransformComponentのY速度が負値（重力）になること。
+    /// </summary>
     [Fact]
     public void UpdateAppliesGravityWhenAirborne()
     {
@@ -55,6 +61,9 @@ public class MovementSystemTest
         vel.Y.ShouldBeLessThan(0f);
     }
 
+    /// <summary>
+    /// FeedbackTransformを呼ぶとTransformComponentのPositionとVelocityが指定値で更新されること。
+    /// </summary>
     [Fact]
     public void FeedbackTransformUpdatesPositionAndVelocity()
     {

@@ -11,6 +11,9 @@ public class PlayerControllerTest
     private static readonly Vector3 Right = new(1, 0, 0);
     private static readonly PlayerSettings DefaultSettings = new();
 
+    /// <summary>
+    /// 前方入力(0,-1)でCalcMovementがZ速度を-Speed（前方向）で返すこと。
+    /// </summary>
     [Fact]
     public void CalcMovement_ForwardInput_ReturnsNegativeZ()
     {
@@ -22,6 +25,9 @@ public class PlayerControllerTest
         vel.Z.ShouldBe(-DefaultSettings.Speed, 0.001f);
     }
 
+    /// <summary>
+    /// CalcMovementを呼ぶとPlayerMoveCommandがrouterにpublishされること。
+    /// </summary>
     [Fact]
     public void CalcMovement_PublishesPlayerMoveCommand()
     {
@@ -35,6 +41,9 @@ public class PlayerControllerTest
         received.Z.ShouldBe(-DefaultSettings.Speed, 0.001f);
     }
 
+    /// <summary>
+    /// FeedbackVelocity(Zero)後にCalcMovementを呼ぶとXZ速度が0になること。
+    /// </summary>
     [Fact]
     public void FeedbackVelocity_AffectsNextCalcMovement()
     {
@@ -49,6 +58,9 @@ public class PlayerControllerTest
         vel.Z.ShouldBe(0f);
     }
 
+    /// <summary>
+    /// マウスX入力100fがYawDelta=-100f×MouseSensitivityに変換されること。
+    /// </summary>
     [Fact]
     public void CalcCameraAim_MouseDeltaX_ReturnsCorrectYawDelta()
     {
@@ -60,6 +72,9 @@ public class PlayerControllerTest
         yawDelta.ShouldBe(-100f * DefaultSettings.MouseSensitivity, 0.0001f);
     }
 
+    /// <summary>
+    /// 上方向への強い入力を繰り返すとピッチがCameraPitchMaxでクランプされること。
+    /// </summary>
     [Fact]
     public void CalcCameraAim_MouseDeltaY_ClampsPitchToMax()
     {
@@ -74,6 +89,9 @@ public class PlayerControllerTest
         pitch.ShouldBe(DefaultSettings.CameraPitchMax);
     }
 
+    /// <summary>
+    /// CalcCameraAimを呼ぶとCameraOrientCommandがYawDelta・Pitch付きでpublishされること。
+    /// </summary>
     [Fact]
     public void CalcCameraAim_PublishesCameraOrientCommand()
     {
@@ -95,6 +113,9 @@ public class PlayerControllerTest
         receivedPitch.ShouldBe(0f);
     }
 
+    /// <summary>
+    /// コンストラクタで渡したPlayerSettingsの値がSettings経由で取得できること。
+    /// </summary>
     [Fact]
     public void Settings_ReflectsInjectedValues()
     {

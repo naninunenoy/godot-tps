@@ -17,6 +17,9 @@ public class HealthSystemTest
         return (world, system, id);
     }
 
+    /// <summary>
+    /// TakeDamage(30)でHPが100から70に減ること。
+    /// </summary>
     [Fact]
     public void TakeDamageReducesHp()
     {
@@ -25,6 +28,9 @@ public class HealthSystemTest
         world.GetComponent<HealthComponent>(id)!.Hp.ShouldBe(70);
     }
 
+    /// <summary>
+    /// 最大HPを超えるダメージを与えてもHPが0にクランプされること（10 - 99 = 0）。
+    /// </summary>
     [Fact]
     public void TakeDamageClampsToZero()
     {
@@ -33,6 +39,9 @@ public class HealthSystemTest
         world.GetComponent<HealthComponent>(id)!.Hp.ShouldBe(0);
     }
 
+    /// <summary>
+    /// 死亡済みエンティティへのTakeDamageがfalseを返し、HPが0のままであること。
+    /// </summary>
     [Fact]
     public void TakeDamageOnDeadEntityReturnsFalse()
     {
@@ -43,6 +52,9 @@ public class HealthSystemTest
         world.GetComponent<HealthComponent>(id)!.Hp.ShouldBe(0);
     }
 
+    /// <summary>
+    /// HPが0になるとTargetDestroyedCommandがEntityId名("target#1")でpublishされること。
+    /// </summary>
     [Fact]
     public async Task TakeDamageToZeroPublishesTargetDestroyed()
     {
@@ -62,6 +74,9 @@ public class HealthSystemTest
         destroyedName.ShouldBe("target#1");
     }
 
+    /// <summary>
+    /// Reset()でHPがmaxHp(50)に戻り、IsAliveがtrueになること。
+    /// </summary>
     [Fact]
     public void ResetRestoresMaxHp()
     {
@@ -73,6 +88,9 @@ public class HealthSystemTest
         hp.IsAlive.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// TakeDamage後にTargetHitイベントがEntityId付きでログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public void TakeDamage_LogsTargetHit()
     {
@@ -92,6 +110,9 @@ public class HealthSystemTest
         logStore.Errors.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// HPが0になるとTargetDestroyedイベントがログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public void TakeDamageToZero_LogsTargetDestroyed()
     {

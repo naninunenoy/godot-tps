@@ -5,6 +5,9 @@ namespace tps.csharp.test;
 
 public class HealthTest
 {
+    /// <summary>
+    /// 生成直後にCurrentがmaxHp(100)であり、IsAliveがtrueであること。
+    /// </summary>
     [Fact]
     public void StartsAtMax()
     {
@@ -13,6 +16,9 @@ public class HealthTest
         hp.IsAlive.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// TakeDamage(30)でCurrentが100から70に減ること。
+    /// </summary>
     [Fact]
     public void TakeDamageReducesCurrent()
     {
@@ -21,6 +27,9 @@ public class HealthTest
         hp.Current.CurrentValue.ShouldBe(70);
     }
 
+    /// <summary>
+    /// HPが0になるとIsAliveがfalseになり、OnDiedが発火すること。
+    /// </summary>
     [Fact]
     public void DiesWhenCurrentReachesZero()
     {
@@ -32,6 +41,9 @@ public class HealthTest
         died.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// 死亡後にTakeDamageを呼んでもCurrentが0のままであること。
+    /// </summary>
     [Fact]
     public void NoDamageAfterDeath()
     {
@@ -41,6 +53,9 @@ public class HealthTest
         hp.Current.CurrentValue.ShouldBe(0);
     }
 
+    /// <summary>
+    /// Reset()でCurrentがmaxHp(50)に戻り、IsAliveがtrueに戻ること。
+    /// </summary>
     [Fact]
     public void ResetRestoresMax()
     {

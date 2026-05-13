@@ -27,6 +27,9 @@ public class WeaponSystemTest
         return (world, system, id);
     }
 
+    /// <summary>
+    /// TryFire()で弾薬が1減ること（30→29）。
+    /// </summary>
     [Fact]
     public void TryFireReducesAmmo()
     {
@@ -35,6 +38,9 @@ public class WeaponSystemTest
         world.GetComponent<WeaponComponent>(id)!.Ammo.ShouldBe(29);
     }
 
+    /// <summary>
+    /// 弾薬0のときTryFire()がfalseを返すこと。
+    /// </summary>
     [Fact]
     public void TryFireWhenEmptyReturnsFalse()
     {
@@ -42,6 +48,9 @@ public class WeaponSystemTest
         system.TryFire(id).ShouldBeFalse();
     }
 
+    /// <summary>
+    /// リロード中はTryFire()がfalseを返すこと。
+    /// </summary>
     [Fact]
     public void TryFireDuringReloadReturnsFalse()
     {
@@ -50,6 +59,9 @@ public class WeaponSystemTest
         system.TryFire(id).ShouldBeFalse();
     }
 
+    /// <summary>
+    /// TryFire()後にShotFiredCommandがAmmoLeft=29でpublishされること。
+    /// </summary>
     [Fact]
     public async Task TryFirePublishesShotFired()
     {
@@ -69,6 +81,9 @@ public class WeaponSystemTest
         ammoLeft.ShouldBe(29);
     }
 
+    /// <summary>
+    /// TryStartReload()でIsReloadingがtrueになり、弾薬がマガジンから消費されて0になること。
+    /// </summary>
     [Fact]
     public void TryStartReloadSetsTimer()
     {
@@ -79,6 +94,9 @@ public class WeaponSystemTest
         weapon.Ammo.ShouldBe(0);
     }
 
+    /// <summary>
+    /// リロード時間(2f)を超えてUpdate(2.1f)を呼ぶと弾薬がマガジン最大(30)に戻り、IsReloadingがfalseになること。
+    /// </summary>
     [Fact]
     public void UpdateCompletesReloadAndRestoresAmmo()
     {
@@ -90,6 +108,9 @@ public class WeaponSystemTest
         weapon.Ammo.ShouldBe(30);
     }
 
+    /// <summary>
+    /// 発射後にUpdate(0.05f)を呼ぶとFireCooldownが0.05f減算されること。
+    /// </summary>
     [Fact]
     public void UpdateDecrementsFireCooldown()
     {
@@ -99,6 +120,9 @@ public class WeaponSystemTest
         world.GetComponent<WeaponComponent>(id)!.FireCooldown.ShouldBe(0.05f, tolerance: 0.001f);
     }
 
+    /// <summary>
+    /// TryFire()後にShotFiredイベントがAmmoLeft=29でログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public void TryFire_LogsShotFired()
     {
@@ -116,6 +140,9 @@ public class WeaponSystemTest
         logStore.Errors.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// TryStartReload()後にReloadStartedイベントがログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public void TryStartReload_LogsReloadStarted()
     {
@@ -133,6 +160,9 @@ public class WeaponSystemTest
         logStore.Errors.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// リロード完了後にReloadCompletedイベントがAmmo=30でログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public void UpdateCompletesReload_LogsReloadCompleted()
     {

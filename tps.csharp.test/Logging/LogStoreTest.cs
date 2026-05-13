@@ -5,6 +5,9 @@ namespace tps.csharp.test;
 
 public class LogStoreTest
 {
+    /// <summary>
+    /// Add() でエントリを1件追加したとき、Entries に1件保存されること。
+    /// </summary>
     [Fact]
     public void Add_StoresEntry()
     {
@@ -20,6 +23,9 @@ public class LogStoreTest
         store.Entries.Count.ShouldBe(1);
     }
 
+    /// <summary>
+    /// 複数エントリを追加後に Clear() を呼んだとき、Entries が空になること。
+    /// </summary>
     [Fact]
     public void Clear_RemovesAllEntries()
     {
@@ -44,6 +50,10 @@ public class LogStoreTest
         store.Entries.ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// Information・Warning・Error・Critical の4件を追加したとき、
+    /// Errors には Error 以上の2件のみ返ること。
+    /// </summary>
     [Fact]
     public void Errors_OnlyReturnsErrorAndAbove()
     {
@@ -83,6 +93,10 @@ public class LogStoreTest
         store.Errors.Count.ShouldBe(2);
     }
 
+    /// <summary>
+    /// HasEvent() にイベント種別を渡したとき、
+    /// 追加済みのイベントは true、未追加のイベントは false を返すこと。
+    /// </summary>
     [Fact]
     public void HasEvent_FindsByEventType()
     {
@@ -99,6 +113,10 @@ public class LogStoreTest
         store.HasEvent(GameEvents.ShotFired).ShouldBeFalse();
     }
 
+    /// <summary>
+    /// HasEvent() にプロパティ条件（述語）を渡したとき、
+    /// プロパティが一致するエントリがある場合は true、一致しない場合は false を返すこと。
+    /// </summary>
     [Fact]
     public void HasEvent_WithPredicate_FiltersOnProperties()
     {
@@ -116,6 +134,9 @@ public class LogStoreTest
         store.HasEvent(GameEvents.TargetHit, p => (int?)p["Damage"] == 99).ShouldBeFalse();
     }
 
+    /// <summary>
+    /// Information・Debug のみのエントリを追加したとき、Errors が空になること。
+    /// </summary>
     [Fact]
     public void Errors_IsEmptyWhenNoErrors()
     {

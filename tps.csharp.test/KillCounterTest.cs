@@ -6,6 +6,9 @@ namespace tps.csharp.test;
 
 public class KillCounterTest
 {
+    /// <summary>
+    /// 生成直後にCount.CurrentValueが0であること。
+    /// </summary>
     [Fact]
     public void CountStartsAtZero()
     {
@@ -14,6 +17,9 @@ public class KillCounterTest
         counter.Count.CurrentValue.ShouldBe(0);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommandを受信するとCountが1になること。
+    /// </summary>
     [Fact]
     public async Task IncrementOnTargetDestroyed()
     {
@@ -23,6 +29,9 @@ public class KillCounterTest
         counter.Count.CurrentValue.ShouldBe(1);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommandを3回受信するとCountが3に累積されること。
+    /// </summary>
     [Fact]
     public async Task MultipleKillsAccumulate()
     {
@@ -34,6 +43,9 @@ public class KillCounterTest
         counter.Count.CurrentValue.ShouldBe(3);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommand受信後にKillCountChangedCommandが正しいカウント(1)でpublishされること。
+    /// </summary>
     [Fact]
     public async Task KillCountChangedCommandPublishedWithCorrectCount()
     {
@@ -50,6 +62,9 @@ public class KillCounterTest
         receivedCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// Dispose後はTargetDestroyedCommandを受信してもカウントが増えず、例外も発生しないこと。
+    /// </summary>
     [Fact]
     public async Task DisposedCounterStopsReceivingCommands()
     {

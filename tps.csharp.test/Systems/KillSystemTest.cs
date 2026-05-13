@@ -6,6 +6,9 @@ namespace tps.csharp.test;
 
 public class KillSystemTest
 {
+    /// <summary>
+    /// 生成直後にKillCountが0であること。
+    /// </summary>
     [Fact]
     public void KillCountStartsAtZero()
     {
@@ -14,6 +17,9 @@ public class KillSystemTest
         system.KillCount.ShouldBe(0);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommandを受信するとKillCountが1になること。
+    /// </summary>
     [Fact]
     public async Task IncrementOnTargetDestroyed()
     {
@@ -23,6 +29,9 @@ public class KillSystemTest
         system.KillCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommandを3回受信するとKillCountが3に累積されること。
+    /// </summary>
     [Fact]
     public async Task MultipleKillsAccumulate()
     {
@@ -34,6 +43,9 @@ public class KillSystemTest
         system.KillCount.ShouldBe(3);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommand受信後にKillCountChangedCommandが正しいカウント(1)でpublishされること。
+    /// </summary>
     [Fact]
     public async Task KillCountChangedCommandPublishedWithCorrectCount()
     {
@@ -45,6 +57,9 @@ public class KillSystemTest
         receivedCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// Dispose後はTargetDestroyedCommandを受信してもKillCountが増えないこと（1のまま）。
+    /// </summary>
     [Fact]
     public async Task DisposedSystemStopsReceivingCommands()
     {
@@ -56,6 +71,9 @@ public class KillSystemTest
         system.KillCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// TargetDestroyedCommand受信後にKillCountChangedイベントがCount=1でログに記録され、エラーがないこと。
+    /// </summary>
     [Fact]
     public async Task OnTargetDestroyed_LogsKillCountChanged()
     {
