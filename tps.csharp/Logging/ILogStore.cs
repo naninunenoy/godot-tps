@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace tps.csharp;
 
 public interface ILogStore

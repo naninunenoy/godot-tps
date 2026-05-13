@@ -1,5 +1,3 @@
-using System;
-
 namespace tps.csharp;
 
 public static class CameraAim

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Shouldly;
-using tps.csharp;
 
 namespace tps.csharp.test;
 
