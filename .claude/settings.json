@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$raw = [Console]::In.ReadToEnd(); $json = $raw | ConvertFrom-Json; $f = $json.tool_input.file_path; if (-not $f -or -not ($f.EndsWith('.cs') -or $f.EndsWith('.csproj'))) { exit 0 }; $errs = @(); dotnet format tps.slnx 2>&1 | Out-Null; dotnet csharpier format . 2>&1 | Out-Null; $br = dotnet build tps.csharp 2>&1; if ($LASTEXITCODE -ne 0) { $errs += 'Build tps.csharp failed:'; $errs += $br }; $br2 = dotnet build tps.godot 2>&1; if ($LASTEXITCODE -ne 0) { $errs += 'Build tps.godot failed:'; $errs += $br2 }; if ($errs.Count -eq 0) { $tr = dotnet test tps.csharp.test --no-build 2>&1; if ($LASTEXITCODE -ne 0) { $errs += 'Tests failed:'; $errs += $tr } }; if ($errs.Count -gt 0) { @{hookSpecificOutput=@{hookEventName='PostToolUse';additionalContext=($errs -join [char]10)}} | ConvertTo-Json -Compress }",
+            "command": "powershell -File .claude/hooks/post-tool-use.ps1",
             "shell": "powershell",
             "timeout": 120,
             "statusMessage": "Building and testing..."
