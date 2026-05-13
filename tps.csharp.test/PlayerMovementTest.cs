@@ -18,8 +18,20 @@ public class PlayerMovementTest
         float speed = 5f,
         float jumpVel = 5f,
         float gravity = 9.8f,
-        float delta = 0f)
-        => PlayerMovement.CalcVelocity(input, Forward, Right, vel, onFloor, jump, speed, jumpVel, gravity, delta);
+        float delta = 0f
+    ) =>
+        PlayerMovement.CalcVelocity(
+            input,
+            Forward,
+            Right,
+            vel,
+            onFloor,
+            jump,
+            speed,
+            jumpVel,
+            gravity,
+            delta
+        );
 
     [Fact]
     public void IdleOnFloorDeceleratesHorizontalVelocity()

@@ -22,7 +22,8 @@ public class Health : IDisposable
 
     public void TakeDamage(int amount)
     {
-        if (!IsAlive) return;
+        if (!IsAlive)
+            return;
         _current.Value = Math.Max(0, _current.CurrentValue - amount);
         if (_current.CurrentValue == 0)
             _onDied.OnNext(Unit.Default);

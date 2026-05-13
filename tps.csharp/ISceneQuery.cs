@@ -11,5 +11,6 @@ public interface IObjectSnapshot
 {
     EntityId Id { get; }
     string Name { get; }
-    T? GetComponent<T>() where T : IComponent;
+    T? GetComponent<T>()
+        where T : IComponent;
 }

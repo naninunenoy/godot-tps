@@ -6,8 +6,11 @@ namespace tps;
 
 public partial class Bullet : Node3D
 {
-    [Export] public float Speed = 80f;
-    [Export] public float MaxDistance = 200f;
+    [Export]
+    public float Speed = 80f;
+
+    [Export]
+    public float MaxDistance = 200f;
 
     private readonly ILogger<Bullet> _logger = AppLogger.For<Bullet>();
     private float _distanceTraveled;

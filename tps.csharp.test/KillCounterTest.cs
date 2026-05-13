@@ -41,7 +41,12 @@ public class KillCounterTest
         var router = new Router();
         using var counter = new KillCounter(router);
         int receivedCount = -1;
-        router.Subscribe<KillCountChangedCommand>((cmd, _) => { receivedCount = cmd.Count; });
+        router.Subscribe<KillCountChangedCommand>(
+            (cmd, _) =>
+            {
+                receivedCount = cmd.Count;
+            }
+        );
         await router.PublishAsync(new TargetDestroyedCommand { TargetName = "Target1" });
         receivedCount.ShouldBe(1);
     }

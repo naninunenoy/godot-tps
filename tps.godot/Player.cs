@@ -9,9 +9,14 @@ namespace tps;
 
 public partial class Player : CharacterBody3D
 {
-    [Export] public int WeaponDamage = 1;
-    [Export] public PackedScene BulletScene = null!;
-    [Export] public bool ShowRaycastDebug = true;
+    [Export]
+    public int WeaponDamage = 1;
+
+    [Export]
+    public PackedScene BulletScene = null!;
+
+    [Export]
+    public bool ShowRaycastDebug = true;
 
     private readonly ILogger<Player> _logger = AppLogger.For<Player>();
 
@@ -58,7 +63,8 @@ public partial class Player : CharacterBody3D
         WeaponSystem weaponSystem,
         MovementSystem movementSystem,
         Router router,
-        PlayerSettings settings)
+        PlayerSettings settings
+    )
     {
         _entity = entity;
         _weaponSystem = weaponSystem;
@@ -76,7 +82,8 @@ public partial class Player : CharacterBody3D
 
     public override void _Input(InputEvent @event)
     {
-        if (_controller is null) return;
+        if (_controller is null)
+            return;
 
         if (@event is InputEventMouseMotion motion)
         {
@@ -98,7 +105,8 @@ public partial class Player : CharacterBody3D
 
     public override void _Process(double delta)
     {
-        if (_entity is null) return;
+        if (_entity is null)
+            return;
 
         _weaponSystem.Update(_entity.Id, (float)delta);
 
@@ -115,7 +123,8 @@ public partial class Player : CharacterBody3D
 
     public override void _PhysicsProcess(double delta)
     {
-        if (_entity is null) return;
+        if (_entity is null)
+            return;
 
         float dt = (float)delta;
         _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
@@ -124,19 +133,27 @@ public partial class Player : CharacterBody3D
 
         var camFwdGodot = -_cameraPivot.GlobalBasis.Z;
         camFwdGodot.Y = 0;
-        if (!camFwdGodot.IsZeroApprox()) camFwdGodot = camFwdGodot.Normalized();
+        if (!camFwdGodot.IsZeroApprox())
+            camFwdGodot = camFwdGodot.Normalized();
         var camRightGodot = _cameraPivot.GlobalBasis.X;
         camRightGodot.Y = 0;
-        if (!camRightGodot.IsZeroApprox()) camRightGodot = camRightGodot.Normalized();
+        if (!camRightGodot.IsZeroApprox())
+            camRightGodot = camRightGodot.Normalized();
 
         bool jumpPressed = Input.IsActionJustPressed("jump");
-        if (IsOnFloor() && jumpPressed) _logger.LogDebug("Jump");
+        if (IsOnFloor() && jumpPressed)
+            _logger.LogDebug("Jump");
 
-        _movementSystem.Update(_entity.Id,
+        _movementSystem.Update(
+            _entity.Id,
             new SN.Vector2(inputDir2D.X, inputDir2D.Y),
             new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
             new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
-            IsOnFloor(), jumpPressed, _controller.Settings, dt);
+            IsOnFloor(),
+            jumpPressed,
+            _controller.Settings,
+            dt
+        );
 
         var transform = _entity.Get<TransformComponent>();
         var vel = transform?.Velocity ?? SN.Vector3.Zero;
@@ -145,14 +162,17 @@ public partial class Player : CharacterBody3D
         if (moveDirGodot.LengthSquared() > 0.01f)
             _body.Basis = _body.Basis.Slerp(
                 Basis.LookingAt(moveDirGodot.Normalized(), Vector3.Up),
-                dt * _controller.Settings.BodyRotationSpeed);
+                dt * _controller.Settings.BodyRotationSpeed
+            );
 
         Velocity = new Vector3(vel.X, vel.Y, vel.Z);
         MoveAndSlide();
 
-        _movementSystem.FeedbackTransform(_entity.Id,
+        _movementSystem.FeedbackTransform(
+            _entity.Id,
             new SN.Vector3(GlobalPosition.X, GlobalPosition.Y, GlobalPosition.Z),
-            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z));
+            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z)
+        );
     }
 
     private void UpdateAimMarker()
@@ -165,13 +185,15 @@ public partial class Player : CharacterBody3D
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
         var hit = result.Count > 0;
         _aimMarker!.GlobalPosition = hit ? result["position"].AsVector3() : end;
-        ((StandardMaterial3D)_aimMarker.MaterialOverride!).AlbedoColor =
-            hit ? new Color(0, 1, 0) : new Color(1, 1, 0);
+        ((StandardMaterial3D)_aimMarker.MaterialOverride!).AlbedoColor = hit
+            ? new Color(0, 1, 0)
+            : new Color(1, 1, 0);
     }
 
     private void SpawnBullet()
     {
-        if (BulletScene == null) return;
+        if (BulletScene == null)
+            return;
         var bullet = BulletScene.Instantiate<Node3D>();
         GetTree().CurrentScene.AddChild(bullet);
         var forward = -_camera.GlobalBasis.Z;
@@ -182,7 +204,8 @@ public partial class Player : CharacterBody3D
 
     private void TryFire()
     {
-        if (!_weaponSystem.TryFire(_entity.Id)) return;
+        if (!_weaponSystem.TryFire(_entity.Id))
+            return;
 
         var w = _entity.Get<WeaponComponent>();
         _logger.LogDebug("Fire ammo={Ammo}/{Max}", w?.Ammo, w?.MagazineSize);
@@ -195,10 +218,13 @@ public partial class Player : CharacterBody3D
         var query = PhysicsRayQueryParameters3D.Create(origin, end);
         query.Exclude = [GetRid()];
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
-        if (result.Count == 0) return;
+        if (result.Count == 0)
+            return;
         if (result["collider"].AsGodotObject() is Target target)
         {
-            _ = _router.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage });
+            _ = _router.PublishAsync(
+                new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage }
+            );
             _logger.LogDebug("Hit target={Name} damage={Damage}", target.Name, WeaponDamage);
         }
     }

@@ -16,26 +16,32 @@ public sealed class World
 
     public bool IsRegistered(EntityId id) => _store.ContainsKey(id);
 
-    public T? GetComponent<T>(EntityId id) where T : IComponent
+    public T? GetComponent<T>(EntityId id)
+        where T : IComponent
     {
-        if (!_store.TryGetValue(id, out var components)) return default;
+        if (!_store.TryGetValue(id, out var components))
+            return default;
         return components.TryGetValue(typeof(T), out var c) ? (T)c : default;
     }
 
-    public void SetComponent<T>(EntityId id, T component) where T : IComponent
+    public void SetComponent<T>(EntityId id, T component)
+        where T : IComponent
     {
         if (!_store.TryGetValue(id, out var components))
             throw new InvalidOperationException($"Entity {id} is not registered in World");
         components[typeof(T)] = component;
     }
 
-    public bool HasComponent<T>(EntityId id) where T : IComponent
+    public bool HasComponent<T>(EntityId id)
+        where T : IComponent
     {
-        if (!_store.TryGetValue(id, out var components)) return false;
+        if (!_store.TryGetValue(id, out var components))
+            return false;
         return components.ContainsKey(typeof(T));
     }
 
-    public IEnumerable<EntityId> GetEntitiesWithComponent<T>() where T : IComponent =>
+    public IEnumerable<EntityId> GetEntitiesWithComponent<T>()
+        where T : IComponent =>
         _store.Where(kv => kv.Value.ContainsKey(typeof(T))).Select(kv => kv.Key);
 
     public int Count => _store.Count;

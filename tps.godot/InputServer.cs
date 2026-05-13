@@ -81,8 +81,13 @@ public partial class InputServer : Node
                 if (_scene is null)
                     SendTextResponse(peer, 503, "not initialized");
                 else
-                    SendJsonResponse(peer, 200, new CommandListResponse(
-                        _scene.AvailableCommands.Select(c => c.Name).ToArray()));
+                    SendJsonResponse(
+                        peer,
+                        200,
+                        new CommandListResponse(
+                            _scene.AvailableCommands.Select(c => c.Name).ToArray()
+                        )
+                    );
             }
             else
             {
@@ -99,7 +104,9 @@ public partial class InputServer : Node
         }
     }
 
-    private async Task<(string method, string path, string body)> ReadRequestAsync(StreamPeerTcp peer)
+    private async Task<(string method, string path, string body)> ReadRequestAsync(
+        StreamPeerTcp peer
+    )
     {
         var rawBytes = new List<byte>();
         var headerEnd = -1;
@@ -116,8 +123,12 @@ public partial class InputServer : Node
 
                 for (var i = 0; i <= rawBytes.Count - 4; i++)
                 {
-                    if (rawBytes[i] == '\r' && rawBytes[i + 1] == '\n' &&
-                        rawBytes[i + 2] == '\r' && rawBytes[i + 3] == '\n')
+                    if (
+                        rawBytes[i] == '\r'
+                        && rawBytes[i + 1] == '\n'
+                        && rawBytes[i + 2] == '\r'
+                        && rawBytes[i + 3] == '\n'
+                    )
                     {
                         headerEnd = i;
                         break;
@@ -173,10 +184,16 @@ public partial class InputServer : Node
 
         GD.Print($"[InputServer] ActionPress: {request.Action} ({request.DurationMs}ms)");
         Input.ActionPress(request.Action);
-        await ToSignal(GetTree().CreateTimer(request.DurationMs / 1000.0), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(
+            GetTree().CreateTimer(request.DurationMs / 1000.0),
+            SceneTreeTimer.SignalName.Timeout
+        );
         Input.ActionRelease(request.Action);
 
-        return new PressActionResponse(true, $"pressed {request.Action} for {request.DurationMs}ms");
+        return new PressActionResponse(
+            true,
+            $"pressed {request.Action} for {request.DurationMs}ms"
+        );
     }
 
     private async Task<byte[]> HandleScreenshotAsync()
@@ -201,26 +218,46 @@ public partial class InputServer : Node
         WriteResponse(peer, status, bodyBytes, "text/plain; charset=utf-8");
     }
 
-    private static void SendBinaryResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    private static void SendBinaryResponse(
+        StreamPeerTcp peer,
+        int status,
+        byte[] bodyBytes,
+        string contentType
+    )
     {
         WriteResponse(peer, status, bodyBytes, contentType);
     }
 
-    private static void WriteResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    private static void WriteResponse(
+        StreamPeerTcp peer,
+        int status,
+        byte[] bodyBytes,
+        string contentType
+    )
     {
-        var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
-        var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
+        var statusText = status switch
+        {
+            200 => "OK",
+            404 => "Not Found",
+            _ => "Error",
+        };
+        var header =
+            $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
         peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
     }
 
     private GameStateResponse BuildStateResponse()
     {
-        var objects = _sceneQuery!.Snapshot.Select(obj => new ObjectSnapshotDto(
-            obj.Id.AsPrimitive(),
-            obj.Name,
-            obj.GetComponent<HealthComponent>() is { } h ? new HealthDto(h.Hp, h.MaxHp) : null,
-            obj.GetComponent<WeaponComponent>() is { } w ? new WeaponDto(w.Ammo, w.MagazineSize, w.IsReloading) : null
-        )).ToArray();
+        var objects = _sceneQuery!
+            .Snapshot.Select(obj => new ObjectSnapshotDto(
+                obj.Id.AsPrimitive(),
+                obj.Name,
+                obj.GetComponent<HealthComponent>() is { } h ? new HealthDto(h.Hp, h.MaxHp) : null,
+                obj.GetComponent<WeaponComponent>() is { } w
+                    ? new WeaponDto(w.Ammo, w.MagazineSize, w.IsReloading)
+                    : null
+            ))
+            .ToArray();
         return new GameStateResponse(_sceneQuery.FrameCount, _sceneQuery.ObjectCount, objects);
     }
 }

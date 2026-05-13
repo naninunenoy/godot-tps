@@ -4,7 +4,8 @@ using ModelContextProtocol.Server;
 using tps.mcp;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddMcpServer()
+builder
+    .Services.AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<InputSimulationTools>()
     .WithTools<GameStateTools>();

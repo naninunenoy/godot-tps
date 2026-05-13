@@ -29,14 +29,28 @@ public sealed class JsonlLoggerProvider : ILoggerProvider
     }
 }
 
-internal sealed class JsonlLogger(string category, LogLevel minLevel, StreamWriter writer, object @lock) : ILogger
+internal sealed class JsonlLogger(
+    string category,
+    LogLevel minLevel,
+    StreamWriter writer,
+    object @lock
+) : ILogger
 {
     public bool IsEnabled(LogLevel level) => level >= minLevel;
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-    public void Log<TState>(LogLevel level, EventId id, TState state, Exception? ex, Func<TState, Exception?, string> formatter)
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull => null;
+
+    public void Log<TState>(
+        LogLevel level,
+        EventId id,
+        TState state,
+        Exception? ex,
+        Func<TState, Exception?, string> formatter
+    )
     {
-        if (!IsEnabled(level)) return;
+        if (!IsEnabled(level))
+            return;
         var entry = new
         {
             ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),

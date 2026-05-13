@@ -7,4 +7,5 @@ public record GameLogEntry(
     string EventType,
     IReadOnlyDictionary<string, object?> Properties,
     DateTimeOffset Timestamp,
-    ulong FrameCount = 0);
+    ulong FrameCount = 0
+);

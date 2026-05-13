@@ -57,7 +57,14 @@ public partial class Main : Node3D, ISceneQuery
         var playerEntity = RegisterEntity("player");
         playerEntity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
         playerEntity.Set(new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
-        GetNode<Player>("Player").Initialize(playerEntity, _weaponSystem, _movementSystem, _router, new PlayerSettings());
+        GetNode<Player>("Player")
+            .Initialize(
+                playerEntity,
+                _weaponSystem,
+                _movementSystem,
+                _router,
+                new PlayerSettings()
+            );
 
         // Targets（"targets" グループに所属するノードを初期化）
         foreach (var target in GetTree().GetNodesInGroup("targets").OfType<Target>())
@@ -89,7 +96,8 @@ public partial class Main : Node3D, ISceneQuery
 
     public override void _Input(InputEvent @event)
     {
-        if (@event is not InputEventKey { Keycode: Key.Escape, Pressed: true }) return;
+        if (@event is not InputEventKey { Keycode: Key.Escape, Pressed: true })
+            return;
         if (_isPaused)
             _ = _router.PublishAsync(new GameResumeRequestedCommand());
         else

@@ -14,10 +14,17 @@ public class WeaponSystemTest
         var system = new WeaponSystem(world, router);
         var id = new EntityId("player#1");
         world.Register(id);
-        world.SetComponent(id, new WeaponComponent(
-            Ammo: ammo, MagazineSize: 30,
-            ReloadTimer: 0f, FireCooldown: 0f,
-            ReloadDuration: 2f, FireInterval: 0.1f));
+        world.SetComponent(
+            id,
+            new WeaponComponent(
+                Ammo: ammo,
+                MagazineSize: 30,
+                ReloadTimer: 0f,
+                FireCooldown: 0f,
+                ReloadDuration: 2f,
+                FireInterval: 0.1f
+            )
+        );
         return (world, system, id);
     }
 

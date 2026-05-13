@@ -11,10 +11,13 @@ public sealed class InMemoryLogStore : ILogStore
     public IReadOnlyList<GameLogEntry> Errors =>
         _entries.Where(e => e.Level >= LogLevel.Error).ToList();
 
-    public bool HasEvent(string eventType,
-        Func<IReadOnlyDictionary<string, object?>, bool>? predicate = null) =>
-        _entries.Any(e => e.EventType == eventType &&
-                          (predicate == null || predicate(e.Properties)));
+    public bool HasEvent(
+        string eventType,
+        Func<IReadOnlyDictionary<string, object?>, bool>? predicate = null
+    ) =>
+        _entries.Any(e =>
+            e.EventType == eventType && (predicate == null || predicate(e.Properties))
+        );
 
     public void Add(GameLogEntry entry) => _entries.Add(entry);
 

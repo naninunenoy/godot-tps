@@ -12,17 +12,25 @@ public sealed class MovementSystem(World world)
         bool isOnFloor,
         bool jumpPressed,
         PlayerSettings settings,
-        float delta)
+        float delta
+    )
     {
         var transform = world.GetComponent<TransformComponent>(id);
-        if (transform is null) return;
+        if (transform is null)
+            return;
 
         var newVelocity = PlayerMovement.CalcVelocity(
-            inputDir, camForward, camRight,
+            inputDir,
+            camForward,
+            camRight,
             transform.Velocity,
-            isOnFloor, jumpPressed,
-            settings.Speed, settings.JumpVelocity, settings.Gravity,
-            delta);
+            isOnFloor,
+            jumpPressed,
+            settings.Speed,
+            settings.JumpVelocity,
+            settings.Gravity,
+            delta
+        );
 
         world.SetComponent(id, transform with { Velocity = newVelocity });
     }
@@ -30,7 +38,15 @@ public sealed class MovementSystem(World world)
     public void FeedbackTransform(EntityId id, Vector3 actualPosition, Vector3 actualVelocity)
     {
         var transform = world.GetComponent<TransformComponent>(id);
-        if (transform is null) return;
-        world.SetComponent(id, transform with { Position = actualPosition, Velocity = actualVelocity });
+        if (transform is null)
+            return;
+        world.SetComponent(
+            id,
+            transform with
+            {
+                Position = actualPosition,
+                Velocity = actualVelocity,
+            }
+        );
     }
 }

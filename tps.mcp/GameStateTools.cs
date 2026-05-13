@@ -35,7 +35,9 @@ public class GameStateTools
     {
         try
         {
-            var response = await _http.GetAsync($"{InputEndpoints.BaseUrl}{InputEndpoints.Commands}");
+            var response = await _http.GetAsync(
+                $"{InputEndpoints.BaseUrl}{InputEndpoints.Commands}"
+            );
             if (!response.IsSuccessStatusCode)
                 return $"error: {response.StatusCode}";
 

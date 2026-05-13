@@ -10,10 +10,17 @@ namespace tps;
 [Routes]
 public partial class Hud : Control
 {
-    [Export] public float CrossSize = 14f;
-    [Export] public float CrossGap = 4f;
-    [Export] public float LineWidth = 2f;
-    [Export] public Color CrossColor = new(1f, 1f, 1f, 0.85f);
+    [Export]
+    public float CrossSize = 14f;
+
+    [Export]
+    public float CrossGap = 4f;
+
+    [Export]
+    public float LineWidth = 2f;
+
+    [Export]
+    public Color CrossColor = new(1f, 1f, 1f, 0.85f);
 
     private Label _killCountLabel = null!;
     private IDisposable? _subscription;
@@ -52,19 +59,27 @@ public partial class Hud : Control
         DrawLine(
             center + new Vector2(-(CrossGap + CrossSize), 0),
             center + new Vector2(-CrossGap, 0),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
         DrawLine(
             center + new Vector2(CrossGap, 0),
             center + new Vector2(CrossGap + CrossSize, 0),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
 
         DrawLine(
             center + new Vector2(0, -(CrossGap + CrossSize)),
             center + new Vector2(0, -CrossGap),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
         DrawLine(
             center + new Vector2(0, CrossGap),
             center + new Vector2(0, CrossGap + CrossSize),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
     }
 }

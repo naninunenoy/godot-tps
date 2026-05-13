@@ -25,11 +25,14 @@ public sealed partial class KillSystem : IDisposable
     public async ValueTask On(TargetDestroyedCommand _)
     {
         _killCount++;
-        _logStore?.Add(new GameLogEntry(
-            LogLevel.Information,
-            GameEvents.KillCountChanged,
-            new Dictionary<string, object?> { ["Count"] = _killCount },
-            DateTimeOffset.UtcNow));
+        _logStore?.Add(
+            new GameLogEntry(
+                LogLevel.Information,
+                GameEvents.KillCountChanged,
+                new Dictionary<string, object?> { ["Count"] = _killCount },
+                DateTimeOffset.UtcNow
+            )
+        );
         await _router.PublishAsync(new KillCountChangedCommand { Count = _killCount });
     }
 

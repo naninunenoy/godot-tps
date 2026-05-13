@@ -17,7 +17,8 @@ public static class PlayerMovement
         float speed,
         float jumpVelocity,
         float gravity,
-        float delta)
+        float delta
+    )
     {
         var moveDir = camForward * -inputDir.Y + camRight * inputDir.X;
         if (moveDir.LengthSquared() > 0.01f)
@@ -48,7 +49,8 @@ public static class PlayerMovement
     private static float MoveToward(float current, float target, float maxDelta)
     {
         var diff = target - current;
-        if (Math.Abs(diff) <= maxDelta) return target;
+        if (Math.Abs(diff) <= maxDelta)
+            return target;
         return current + (diff > 0 ? 1f : -1f) * maxDelta;
     }
 }

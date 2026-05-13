@@ -22,12 +22,16 @@ public class MovementSystemTest
     public void UpdateChangesVelocityWithForwardInput()
     {
         var (world, system, id) = Setup();
-        system.Update(id,
+        system.Update(
+            id,
             inputDir: new Vector2(0, -1),
             camForward: Vector3.UnitZ,
             camRight: Vector3.UnitX,
-            isOnFloor: true, jumpPressed: false,
-            Settings, delta: 0.016f);
+            isOnFloor: true,
+            jumpPressed: false,
+            Settings,
+            delta: 0.016f
+        );
 
         var vel = world.GetComponent<TransformComponent>(id)!.Velocity;
         vel.Z.ShouldBeGreaterThan(0f);
@@ -37,12 +41,16 @@ public class MovementSystemTest
     public void UpdateAppliesGravityWhenAirborne()
     {
         var (world, system, id) = Setup();
-        system.Update(id,
+        system.Update(
+            id,
             inputDir: Vector2.Zero,
             camForward: Vector3.UnitZ,
             camRight: Vector3.UnitX,
-            isOnFloor: false, jumpPressed: false,
-            Settings, delta: 1f);
+            isOnFloor: false,
+            jumpPressed: false,
+            Settings,
+            delta: 1f
+        );
 
         var vel = world.GetComponent<TransformComponent>(id)!.Velocity;
         vel.Y.ShouldBeLessThan(0f);

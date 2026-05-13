@@ -6,7 +6,8 @@ public record WeaponComponent(
     float ReloadTimer,
     float FireCooldown,
     float ReloadDuration,
-    float FireInterval) : IComponent
+    float FireInterval
+) : IComponent
 {
     public bool IsReloading => ReloadTimer > 0f;
     public bool CanFire => !IsReloading && FireCooldown <= 0f && Ammo > 0;

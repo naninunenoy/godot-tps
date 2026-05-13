@@ -11,8 +11,11 @@ namespace tps;
 [Routes]
 public partial class Target : StaticBody3D
 {
-    [Export] public int MaxHp = 3;
-    [Export] public float RespawnDelay = 3f;
+    [Export]
+    public int MaxHp = 3;
+
+    [Export]
+    public float RespawnDelay = 3f;
 
     private Entity _entity = null!;
     private HealthSystem _healthSystem = null!;
@@ -55,7 +58,8 @@ public partial class Target : StaticBody3D
     [Route]
     public void On(TargetHitCommand cmd)
     {
-        if (cmd.TargetName != Name) return;
+        if (cmd.TargetName != Name)
+            return;
         _healthSystem.TakeDamage(_entity.Id, cmd.Damage);
         var hp = _entity.Get<HealthComponent>();
         _logger.LogDebug("Target hit hp={Hp}/{Max}", hp?.Hp, hp?.MaxHp);
@@ -64,7 +68,8 @@ public partial class Target : StaticBody3D
     [Route]
     public void On(TargetDestroyedCommand cmd)
     {
-        if (cmd.TargetName != _entity.Id.AsPrimitive()) return;
+        if (cmd.TargetName != _entity.Id.AsPrimitive())
+            return;
         _mesh.Visible = false;
         _collision.Disabled = true;
         _respawnTimer.Start();

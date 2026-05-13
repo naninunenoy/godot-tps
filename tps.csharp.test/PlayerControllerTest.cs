@@ -82,11 +82,13 @@ public class PlayerControllerTest
         var ctrl = new PlayerController(router, DefaultSettings);
         float receivedYaw = 0f;
         float receivedPitch = 0f;
-        router.Subscribe<CameraOrientCommand>((cmd, _) =>
-        {
-            receivedYaw = cmd.YawDelta;
-            receivedPitch = cmd.Pitch;
-        });
+        router.Subscribe<CameraOrientCommand>(
+            (cmd, _) =>
+            {
+                receivedYaw = cmd.YawDelta;
+                receivedPitch = cmd.Pitch;
+            }
+        );
 
         ctrl.CalcCameraAim(50f, 0f);
 

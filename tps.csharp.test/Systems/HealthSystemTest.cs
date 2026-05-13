@@ -87,7 +87,9 @@ public class HealthSystemTest
 
         system.TakeDamage(id, 30);
 
-        logStore.HasEvent(GameEvents.TargetHit, p => (string?)p["EntityId"] == "target#1").ShouldBeTrue();
+        logStore
+            .HasEvent(GameEvents.TargetHit, p => (string?)p["EntityId"] == "target#1")
+            .ShouldBeTrue();
         logStore.Errors.ShouldBeEmpty();
     }
 
