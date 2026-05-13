@@ -10,7 +10,7 @@ public sealed partial class KillSystem : IDisposable
     private readonly Router _router;
     private readonly ILogStore? _logStore;
     private int _killCount;
-    private IDisposable? _subscription;
+    private readonly IDisposable? _subscription;
 
     public int KillCount => _killCount;
 

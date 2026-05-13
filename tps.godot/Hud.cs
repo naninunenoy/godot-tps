@@ -11,8 +11,8 @@ namespace tps;
 public partial class Hud : Control
 {
     [Export] public float CrossSize = 14f;
-    [Export] public float CrossGap  =  4f;
-    [Export] public float LineWidth =  2f;
+    [Export] public float CrossGap = 4f;
+    [Export] public float LineWidth = 2f;
     [Export] public Color CrossColor = new(1f, 1f, 1f, 0.85f);
 
     private Label _killCountLabel = null!;
