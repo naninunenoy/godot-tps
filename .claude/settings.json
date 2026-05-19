@@ -6,8 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -File .claude/hooks/post-tool-use.ps1",
-            "shell": "powershell",
+            "command": "bash .claude/hooks/post-tool-use.sh",
             "timeout": 120,
             "statusMessage": "Building and testing..."
           }
