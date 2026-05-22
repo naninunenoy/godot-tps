@@ -76,6 +76,11 @@ public partial class Main : Node3D, ISceneQuery
             var entity = RegisterEntity(target.Name);
             entity.Set(new HealthComponent(target.MaxHp, target.MaxHp));
             entity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
+            var shape = target.GetNode<CollisionShape3D>("CollisionShape3D");
+            var box = (BoxShape3D)shape.Shape;
+            var halfSize = box.Size / 2f;
+            var center = shape.GlobalPosition;
+            entity.Set(new BoundsComponent((center - halfSize).ToNumerics(), (center + halfSize).ToNumerics()));
             target.Initialize(entity, _healthSystem, _router);
         }
 
