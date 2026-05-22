@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Microsoft.Extensions.Logging;
 using tps.contract;
@@ -7,11 +8,9 @@ using VitalRouter;
 
 namespace tps;
 
+[Routes]
 public partial class Player : CharacterBody3D
 {
-    [Export]
-    public int WeaponDamage = 1;
-
     [Export]
     public PackedScene BulletScene = null!;
 
@@ -25,6 +24,7 @@ public partial class Player : CharacterBody3D
     private MovementSystem _movementSystem = null!;
     private Router _router = null!;
     private PlayerController _controller = null!;
+    private IDisposable? _subscription;
 
     private Node3D _cameraPivot = null!;
     private SpringArm3D _springArm = null!;
@@ -71,12 +71,14 @@ public partial class Player : CharacterBody3D
         _movementSystem = movementSystem;
         _router = router;
         _controller = new PlayerController(router, settings);
+        _subscription = this.MapTo(_router);
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
     }
 
     public override void _ExitTree()
     {
+        _subscription?.Dispose();
         _controller?.Dispose();
     }
 
@@ -98,9 +100,13 @@ public partial class Player : CharacterBody3D
             if (_weaponSystem.TryStartReload(_entity.Id))
             {
                 var w = _entity.Get<WeaponComponent>();
-                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", w?.Ammo, w?.MagazineSize);
+                _logger.LogDebug("Reload started ammo={Ammo}/{Max}", w?.CurrentAmmo, w?.MagazineSize);
             }
         }
+        if (@event.IsActionPressed("aim"))
+            _weaponSystem.StartAim(_entity.Id);
+        else if (@event.IsActionReleased("aim"))
+            _weaponSystem.StopAim(_entity.Id);
     }
 
     public override void _Process(double delta)
@@ -117,8 +123,7 @@ public partial class Player : CharacterBody3D
         if (Input.IsActionPressed("fire"))
             TryFire();
 
-        if (ShowRaycastDebug && _aimMarker != null)
-            UpdateAimMarker();
+        UpdateAimFeedback();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -129,26 +134,23 @@ public partial class Player : CharacterBody3D
         float dt = (float)delta;
         _cameraPivot.GlobalPosition = GlobalPosition + Vector3.Up * 2.5f;
 
-        Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
-
         var camFwdGodot = -_cameraPivot.GlobalBasis.Z;
         camFwdGodot.Y = 0;
         if (!camFwdGodot.IsZeroApprox())
             camFwdGodot = camFwdGodot.Normalized();
-        var camRightGodot = _cameraPivot.GlobalBasis.X;
-        camRightGodot.Y = 0;
-        if (!camRightGodot.IsZeroApprox())
-            camRightGodot = camRightGodot.Normalized();
+
+        // CameraComponent を World に反映してから MovementSystem を呼ぶ
+        _entity.Set(new CameraComponent(new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z)));
+
+        Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
         bool jumpPressed = Input.IsActionJustPressed("jump");
         if (IsOnFloor() && jumpPressed)
             _logger.LogDebug("Jump");
 
-        _movementSystem.Update(
+        _movementSystem.Move(
             _entity.Id,
             new SN.Vector2(inputDir2D.X, inputDir2D.Y),
-            new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z),
-            new SN.Vector3(camRightGodot.X, camRightGodot.Y, camRightGodot.Z),
             IsOnFloor(),
             jumpPressed,
             _controller.Settings,
@@ -157,6 +159,11 @@ public partial class Player : CharacterBody3D
 
         var transform = _entity.Get<TransformComponent>();
         var vel = transform?.Velocity ?? SN.Vector3.Zero;
+
+        var camRightGodot = _cameraPivot.GlobalBasis.X;
+        camRightGodot.Y = 0;
+        if (!camRightGodot.IsZeroApprox())
+            camRightGodot = camRightGodot.Normalized();
 
         var moveDirGodot = camFwdGodot * -inputDir2D.Y + camRightGodot * inputDir2D.X;
         if (moveDirGodot.LengthSquared() > 0.01f)
@@ -175,26 +182,13 @@ public partial class Player : CharacterBody3D
         );
     }
 
-    private void UpdateAimMarker()
-    {
-        var origin = _camera.GlobalPosition;
-        var direction = -_camera.GlobalBasis.Z;
-        var end = origin + direction * 100f;
-        var query = PhysicsRayQueryParameters3D.Create(origin, end);
-        query.Exclude = [GetRid()];
-        var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
-        var hit = result.Count > 0;
-        _aimMarker!.GlobalPosition = hit ? result["position"].AsVector3() : end;
-        ((StandardMaterial3D)_aimMarker.MaterialOverride!).AlbedoColor = hit
-            ? new Color(0, 1, 0)
-            : new Color(1, 1, 0);
-    }
-
-    private void SpawnBullet()
+    [Route]
+    public void On(BulletSpawnRequested cmd)
     {
         if (BulletScene == null)
             return;
-        var bullet = BulletScene.Instantiate<Node3D>();
+        var bullet = BulletScene.Instantiate<Bullet>();
+        bullet.Initialize(_router, cmd.Speed, cmd.Damage);
         GetTree().CurrentScene.AddChild(bullet);
         var forward = -_camera.GlobalBasis.Z;
         bullet.GlobalPosition = GlobalPosition + Vector3.Up * 1.3f + forward * 0.5f;
@@ -206,26 +200,27 @@ public partial class Player : CharacterBody3D
     {
         if (!_weaponSystem.TryFire(_entity.Id))
             return;
-
         var w = _entity.Get<WeaponComponent>();
-        _logger.LogDebug("Fire ammo={Ammo}/{Max}", w?.Ammo, w?.MagazineSize);
+        _logger.LogDebug("Fire ammo={Ammo}/{Max}", w?.CurrentAmmo, w?.MagazineSize);
+    }
 
-        SpawnBullet();
-
+    private void UpdateAimFeedback()
+    {
         var origin = _camera.GlobalPosition;
         var direction = -_camera.GlobalBasis.Z;
         var end = origin + direction * 200f;
         var query = PhysicsRayQueryParameters3D.Create(origin, end);
         query.Exclude = [GetRid()];
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
-        if (result.Count == 0)
-            return;
-        if (result["collider"].AsGodotObject() is Target target)
+        var isOnTarget = result.Count > 0 && result["collider"].AsGodotObject() is Target;
+        _ = _router.PublishAsync(new AimUpdatedCommand { IsOnTarget = isOnTarget });
+
+        if (ShowRaycastDebug && _aimMarker != null)
         {
-            _ = _router.PublishAsync(
-                new TargetHitCommand { TargetName = target.Name, Damage = WeaponDamage }
-            );
-            _logger.LogDebug("Hit target={Name} damage={Damage}", target.Name, WeaponDamage);
+            _aimMarker.GlobalPosition = result.Count > 0 ? result["position"].AsVector3() : end;
+            ((StandardMaterial3D)_aimMarker.MaterialOverride!).AlbedoColor = isOnTarget
+                ? new Color(0, 1, 0)
+                : new Color(1, 1, 0);
         }
     }
 }

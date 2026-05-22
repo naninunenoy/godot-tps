@@ -56,6 +56,9 @@ public partial class Main : Node3D, ISceneQuery
         // Player
         var playerEntity = RegisterEntity("player");
         playerEntity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
+        playerEntity.Set(new CameraComponent(SN.Vector3.UnitZ));
+        playerEntity.Set(new MovementComponent(new PlayerSettings().Speed));
+        playerEntity.Set(new AdsComponent(IsAiming: false));
         playerEntity.Set(new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
         GetNode<Player>("Player")
             .Initialize(
@@ -70,8 +73,8 @@ public partial class Main : Node3D, ISceneQuery
         foreach (var target in GetTree().GetNodesInGroup("targets").OfType<Target>())
         {
             var entity = RegisterEntity(target.Name);
-            entity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
             entity.Set(new HealthComponent(target.MaxHp, target.MaxHp));
+            entity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
             target.Initialize(entity, _healthSystem, _router);
         }
 

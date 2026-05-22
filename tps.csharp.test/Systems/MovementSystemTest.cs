@@ -12,23 +12,22 @@ public class MovementSystemTest
         var id = new EntityId("player#1");
         world.Register(id);
         world.SetComponent(id, new TransformComponent(Vector3.Zero, Vector3.Zero));
+        world.SetComponent(id, new CameraComponent(Vector3.UnitZ));
         return (world, system, id);
     }
 
     private static readonly PlayerSettings Settings = new();
 
     /// <summary>
-    /// 前方入力でUpdateを呼ぶとTransformComponentのZ速度が正値（前方向）になること。
+    /// 前方入力でMoveを呼ぶとTransformComponentのZ速度が正値（前方向）になること。
     /// </summary>
     [Fact]
-    public void UpdateChangesVelocityWithForwardInput()
+    public void MoveChangesVelocityWithForwardInput()
     {
         var (world, system, id) = Setup();
-        system.Update(
+        system.Move(
             id,
             inputDir: new Vector2(0, -1),
-            camForward: Vector3.UnitZ,
-            camRight: Vector3.UnitX,
             isOnFloor: true,
             jumpPressed: false,
             Settings,
@@ -40,17 +39,15 @@ public class MovementSystemTest
     }
 
     /// <summary>
-    /// 空中(isOnFloor=false)・delta=1fでUpdateを呼ぶとTransformComponentのY速度が負値（重力）になること。
+    /// 空中(isOnFloor=false)・delta=1fでMoveを呼ぶとTransformComponentのY速度が負値（重力）になること。
     /// </summary>
     [Fact]
-    public void UpdateAppliesGravityWhenAirborne()
+    public void MoveAppliesGravityWhenAirborne()
     {
         var (world, system, id) = Setup();
-        system.Update(
+        system.Move(
             id,
             inputDir: Vector2.Zero,
-            camForward: Vector3.UnitZ,
-            camRight: Vector3.UnitX,
             isOnFloor: false,
             jumpPressed: false,
             Settings,

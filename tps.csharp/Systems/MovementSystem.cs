@@ -4,11 +4,9 @@ namespace tps.csharp;
 
 public sealed class MovementSystem(World world)
 {
-    public void Update(
+    public void Move(
         EntityId id,
         Vector2 inputDir,
-        Vector3 camForward,
-        Vector3 camRight,
         bool isOnFloor,
         bool jumpPressed,
         PlayerSettings settings,
@@ -19,9 +17,15 @@ public sealed class MovementSystem(World world)
         if (transform is null)
             return;
 
+        var camera = world.GetComponent<CameraComponent>(id);
+        var camFwd = camera?.Forward ?? Vector3.UnitZ;
+
+        var right = Vector3.Cross(Vector3.UnitY, camFwd);
+        var camRight = right.LengthSquared() > 0.0001f ? Vector3.Normalize(right) : Vector3.UnitX;
+
         var newVelocity = PlayerMovement.CalcVelocity(
             inputDir,
-            camForward,
+            camFwd,
             camRight,
             transform.Velocity,
             isOnFloor,

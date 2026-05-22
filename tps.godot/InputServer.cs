@@ -254,7 +254,7 @@ public partial class InputServer : Node
                 obj.Name,
                 obj.GetComponent<HealthComponent>() is { } h ? new HealthDto(h.Hp, h.MaxHp) : null,
                 obj.GetComponent<WeaponComponent>() is { } w
-                    ? new WeaponDto(w.Ammo, w.MagazineSize, w.IsReloading)
+                    ? new WeaponDto(w.CurrentAmmo, w.MagazineSize, w.IsReloading)
                     : null
             ))
             .ToArray();

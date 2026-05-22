@@ -16,7 +16,7 @@ public class WeaponSystemTest
         world.SetComponent(
             id,
             new WeaponComponent(
-                Ammo: ammo,
+                CurrentAmmo: ammo,
                 MagazineSize: 30,
                 ReloadTimer: 0f,
                 FireCooldown: 0f,
@@ -24,6 +24,8 @@ public class WeaponSystemTest
                 FireInterval: 0.1f
             )
         );
+        world.SetComponent(id, new AdsComponent(IsAiming: true));
+        world.SetComponent(id, new CameraComponent(System.Numerics.Vector3.UnitZ));
         return (world, system, id);
     }
 
@@ -35,7 +37,7 @@ public class WeaponSystemTest
     {
         var (world, system, id) = Setup();
         system.TryFire(id);
-        world.GetComponent<WeaponComponent>(id)!.Ammo.ShouldBe(29);
+        world.GetComponent<WeaponComponent>(id)!.CurrentAmmo.ShouldBe(29);
     }
 
     /// <summary>
@@ -60,22 +62,31 @@ public class WeaponSystemTest
     }
 
     /// <summary>
+    /// ADS中でないときTryFire()がfalseを返すこと。
+    /// </summary>
+    [Fact]
+    public void TryFireWithoutAdsReturnsFalse()
+    {
+        var (world, system, id) = Setup();
+        world.SetComponent(id, new AdsComponent(IsAiming: false));
+        system.TryFire(id).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// TryFire()後にShotFiredCommandがAmmoLeft=29でpublishされること。
     /// </summary>
     [Fact]
     public async Task TryFirePublishesShotFired()
     {
-        var world = new World();
+        var (world, system, id) = Setup();
         var router = new Router();
-        var system = new WeaponSystem(world, router);
-        var id = new EntityId("player#1");
-        world.Register(id);
+        var system2 = new WeaponSystem(world, router);
         world.SetComponent(id, new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
 
         int? ammoLeft = null;
         router.Subscribe<ShotFiredCommand>((cmd, _) => ammoLeft = cmd.AmmoLeft);
 
-        system.TryFire(id);
+        system2.TryFire(id);
         await Task.Yield();
 
         ammoLeft.ShouldBe(29);
@@ -91,7 +102,7 @@ public class WeaponSystemTest
         system.TryStartReload(id);
         var weapon = world.GetComponent<WeaponComponent>(id)!;
         weapon.IsReloading.ShouldBeTrue();
-        weapon.Ammo.ShouldBe(0);
+        weapon.CurrentAmmo.ShouldBe(0);
     }
 
     /// <summary>
@@ -105,7 +116,7 @@ public class WeaponSystemTest
         system.Update(id, 2.1f);
         var weapon = world.GetComponent<WeaponComponent>(id)!;
         weapon.IsReloading.ShouldBeFalse();
-        weapon.Ammo.ShouldBe(30);
+        weapon.CurrentAmmo.ShouldBe(30);
     }
 
     /// <summary>
@@ -133,6 +144,8 @@ public class WeaponSystemTest
         var id = new EntityId("player#1");
         world.Register(id);
         world.SetComponent(id, new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
+        world.SetComponent(id, new AdsComponent(IsAiming: true));
+        world.SetComponent(id, new CameraComponent(System.Numerics.Vector3.UnitZ));
 
         system.TryFire(id);
 
@@ -179,5 +192,41 @@ public class WeaponSystemTest
 
         logStore.HasEvent(GameEvents.ReloadCompleted, p => (int?)p["Ammo"] == 30).ShouldBeTrue();
         logStore.Errors.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// StartAim()でAdsComponent.IsAimingがtrueになること。
+    /// </summary>
+    [Fact]
+    public void StartAimSetsIsAimingTrue()
+    {
+        var world = new World();
+        var router = new Router();
+        var system = new WeaponSystem(world, router);
+        var id = new EntityId("player#1");
+        world.Register(id);
+        world.SetComponent(id, new AdsComponent(IsAiming: false));
+
+        system.StartAim(id);
+
+        world.GetComponent<AdsComponent>(id)!.IsAiming.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// StopAim()でAdsComponent.IsAimingがfalseになること。
+    /// </summary>
+    [Fact]
+    public void StopAimSetsIsAimingFalse()
+    {
+        var world = new World();
+        var router = new Router();
+        var system = new WeaponSystem(world, router);
+        var id = new EntityId("player#1");
+        world.Register(id);
+        world.SetComponent(id, new AdsComponent(IsAiming: true));
+
+        system.StopAim(id);
+
+        world.GetComponent<AdsComponent>(id)!.IsAiming.ShouldBeFalse();
     }
 }

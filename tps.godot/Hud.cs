@@ -52,6 +52,13 @@ public partial class Hud : Control
         _logger.LogDebug("Kill count updated: {Count}", cmd.Count);
     }
 
+    [Route]
+    public void On(AimUpdatedCommand cmd)
+    {
+        CrossColor = cmd.IsOnTarget ? new Color(1f, 0.2f, 0.2f, 0.95f) : new Color(1f, 1f, 1f, 0.85f);
+        QueueRedraw();
+    }
+
     public override void _Draw()
     {
         var center = Size / 2f;

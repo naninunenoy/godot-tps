@@ -47,6 +47,13 @@ public partial class Target : StaticBody3D
         _healthSystem = healthSystem;
         _router = router;
         _subscription = this.MapTo(_router);
+
+        var pos = GlobalPosition;
+        _entity.Set(new tps.csharp.TransformComponent(
+            new SN.Vector3(pos.X, pos.Y, pos.Z),
+            SN.Vector3.Zero
+        ));
+
         _logger.LogDebug("Target ready name={Name} hp={MaxHp}", Name, MaxHp);
     }
 
