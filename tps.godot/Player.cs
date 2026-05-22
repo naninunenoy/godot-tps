@@ -31,6 +31,7 @@ public partial class Player : CharacterBody3D
     private MeshInstance3D _body = null!;
     private Camera3D _camera = null!;
     private MeshInstance3D? _aimMarker;
+    private bool _lastIsOnTarget;
 
     public override void _Ready()
     {
@@ -104,9 +105,9 @@ public partial class Player : CharacterBody3D
             }
         }
         if (@event.IsActionPressed("aim"))
-            _weaponSystem.StartAim(_entity.Id);
+            _weaponSystem.SetAiming(_entity.Id, true);
         else if (@event.IsActionReleased("aim"))
-            _weaponSystem.StopAim(_entity.Id);
+            _weaponSystem.SetAiming(_entity.Id, false);
     }
 
     public override void _Process(double delta)
@@ -139,8 +140,7 @@ public partial class Player : CharacterBody3D
         if (!camFwdGodot.IsZeroApprox())
             camFwdGodot = camFwdGodot.Normalized();
 
-        // CameraComponent を World に反映してから MovementSystem を呼ぶ
-        _entity.Set(new CameraComponent(new SN.Vector3(camFwdGodot.X, camFwdGodot.Y, camFwdGodot.Z)));
+        _entity.Set(new CameraComponent(camFwdGodot.ToNumerics()));
 
         Vector2 inputDir2D = Input.GetVector("ui_left", "ui_right", "ui_up", "ui_down");
 
@@ -172,13 +172,13 @@ public partial class Player : CharacterBody3D
                 dt * _controller.Settings.BodyRotationSpeed
             );
 
-        Velocity = new Vector3(vel.X, vel.Y, vel.Z);
+        Velocity = vel.ToGodot();
         MoveAndSlide();
 
         _movementSystem.FeedbackTransform(
             _entity.Id,
-            new SN.Vector3(GlobalPosition.X, GlobalPosition.Y, GlobalPosition.Z),
-            new SN.Vector3(Velocity.X, Velocity.Y, Velocity.Z)
+            GlobalPosition.ToNumerics(),
+            Velocity.ToNumerics()
         );
     }
 
@@ -213,7 +213,11 @@ public partial class Player : CharacterBody3D
         query.Exclude = [GetRid()];
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
         var isOnTarget = result.Count > 0 && result["collider"].AsGodotObject() is Target;
-        _ = _router.PublishAsync(new AimUpdatedCommand { IsOnTarget = isOnTarget });
+        if (isOnTarget != _lastIsOnTarget)
+        {
+            _lastIsOnTarget = isOnTarget;
+            _ = _router.PublishAsync(new AimUpdatedCommand { IsOnTarget = isOnTarget });
+        }
 
         if (ShowRaycastDebug && _aimMarker != null)
         {

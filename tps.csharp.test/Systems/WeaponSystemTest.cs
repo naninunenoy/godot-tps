@@ -78,15 +78,19 @@ public class WeaponSystemTest
     [Fact]
     public async Task TryFirePublishesShotFired()
     {
-        var (world, system, id) = Setup();
+        var world = new World();
         var router = new Router();
-        var system2 = new WeaponSystem(world, router);
+        var system = new WeaponSystem(world, router);
+        var id = new EntityId("player#1");
+        world.Register(id);
         world.SetComponent(id, new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
+        world.SetComponent(id, new AdsComponent(IsAiming: true));
+        world.SetComponent(id, new CameraComponent(System.Numerics.Vector3.UnitZ));
 
         int? ammoLeft = null;
         router.Subscribe<ShotFiredCommand>((cmd, _) => ammoLeft = cmd.AmmoLeft);
 
-        system2.TryFire(id);
+        system.TryFire(id);
         await Task.Yield();
 
         ammoLeft.ShouldBe(29);
@@ -195,10 +199,10 @@ public class WeaponSystemTest
     }
 
     /// <summary>
-    /// StartAim()でAdsComponent.IsAimingがtrueになること。
+    /// SetAiming(true)でAdsComponent.IsAimingがtrueになること。
     /// </summary>
     [Fact]
-    public void StartAimSetsIsAimingTrue()
+    public void SetAimingTrueSetsIsAimingTrue()
     {
         var world = new World();
         var router = new Router();
@@ -207,16 +211,16 @@ public class WeaponSystemTest
         world.Register(id);
         world.SetComponent(id, new AdsComponent(IsAiming: false));
 
-        system.StartAim(id);
+        system.SetAiming(id, true);
 
         world.GetComponent<AdsComponent>(id)!.IsAiming.ShouldBeTrue();
     }
 
     /// <summary>
-    /// StopAim()でAdsComponent.IsAimingがfalseになること。
+    /// SetAiming(false)でAdsComponent.IsAimingがfalseになること。
     /// </summary>
     [Fact]
-    public void StopAimSetsIsAimingFalse()
+    public void SetAimingFalseSetsIsAimingFalse()
     {
         var world = new World();
         var router = new Router();
@@ -225,7 +229,7 @@ public class WeaponSystemTest
         world.Register(id);
         world.SetComponent(id, new AdsComponent(IsAiming: true));
 
-        system.StopAim(id);
+        system.SetAiming(id, false);
 
         world.GetComponent<AdsComponent>(id)!.IsAiming.ShouldBeFalse();
     }

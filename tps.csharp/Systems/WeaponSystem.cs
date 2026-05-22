@@ -6,18 +6,11 @@ namespace tps.csharp;
 
 public sealed class WeaponSystem(World world, Router router, ILogStore? logStore = null)
 {
-    public void StartAim(EntityId id)
+    public void SetAiming(EntityId id, bool isAiming)
     {
         var ads = world.GetComponent<AdsComponent>(id);
         if (ads is null) return;
-        world.SetComponent(id, ads with { IsAiming = true });
-    }
-
-    public void StopAim(EntityId id)
-    {
-        var ads = world.GetComponent<AdsComponent>(id);
-        if (ads is null) return;
-        world.SetComponent(id, ads with { IsAiming = false });
+        world.SetComponent(id, ads with { IsAiming = isAiming });
     }
 
     public bool TryFire(EntityId id)

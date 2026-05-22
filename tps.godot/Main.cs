@@ -54,10 +54,11 @@ public partial class Main : Node3D, ISceneQuery
         _movementSystem = new MovementSystem(_world);
 
         // Player
+        var playerSettings = new PlayerSettings();
         var playerEntity = RegisterEntity("player");
         playerEntity.Set(new TransformComponent(SN.Vector3.Zero, SN.Vector3.Zero));
         playerEntity.Set(new CameraComponent(SN.Vector3.UnitZ));
-        playerEntity.Set(new MovementComponent(new PlayerSettings().Speed));
+        playerEntity.Set(new MovementComponent(playerSettings.Speed));
         playerEntity.Set(new AdsComponent(IsAiming: false));
         playerEntity.Set(new WeaponComponent(30, 30, 0f, 0f, 2f, 0.1f));
         GetNode<Player>("Player")
@@ -66,7 +67,7 @@ public partial class Main : Node3D, ISceneQuery
                 _weaponSystem,
                 _movementSystem,
                 _router,
-                new PlayerSettings()
+                playerSettings
             );
 
         // Targets（"targets" グループに所属するノードを初期化）
