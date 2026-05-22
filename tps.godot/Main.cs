@@ -92,7 +92,7 @@ public partial class Main : Node3D, ISceneQuery
         // シーン
         _currentScene = new InGameScene();
         _subscription = this.MapTo(_router);
-        GetNode<InputServer>("/root/InputServer").Initialize(this, _currentScene);
+        GetNode<InputServer>("/root/InputServer").Initialize(this, _currentScene, GetNode<Player>("Player"));
 
         _logger.LogDebug("Main ready");
     }

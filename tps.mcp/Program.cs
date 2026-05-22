@@ -7,6 +7,7 @@ builder
     .Services.AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<InputSimulationTools>()
-    .WithTools<GameStateTools>();
+    .WithTools<GameStateTools>()
+    .WithTools<CameraControlTools>();
 
 await builder.Build().RunAsync();

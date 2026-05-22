@@ -66,5 +66,10 @@ public sealed class PlayerController : IDisposable
         return (yawDelta, _cameraPitch);
     }
 
+    public void SetPitch(float pitch)
+    {
+        _cameraPitch = Math.Clamp(pitch, Settings.CameraPitchMin, Settings.CameraPitchMax);
+    }
+
     public void Dispose() { }
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
+using tps;
 using tps.contract;
 using tps.csharp;
 
@@ -13,11 +14,13 @@ public partial class InputServer : Node
     private readonly TcpServer _tcpServer = new();
     private ISceneQuery? _sceneQuery;
     private IScene? _scene;
+    private Player? _player;
 
-    public void Initialize(ISceneQuery sceneQuery, IScene scene)
+    public void Initialize(ISceneQuery sceneQuery, IScene scene, Player player)
     {
         _sceneQuery = sceneQuery;
         _scene = scene;
+        _player = player;
     }
 
     public override void _Ready()
@@ -89,6 +92,38 @@ public partial class InputServer : Node
                             _scene.AvailableCommands.Select(c => c.Name).ToArray()
                         )
                     );
+            }
+            else if (method == "POST" && path == InputEndpoints.CameraPitch)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<SetCameraPitchCommand>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
+                    }
+                }
+            }
+            else if (method == "POST" && path == InputEndpoints.LookAt)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<LookAtPositionCommand>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
+                    }
+                }
             }
             else
             {

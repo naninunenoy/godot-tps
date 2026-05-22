@@ -183,6 +183,39 @@ public partial class Player : CharacterBody3D
     }
 
     [Route]
+    public void On(SetCameraPitchCommand cmd) =>
+        SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
+
+    [Route]
+    public void On(LookAtPositionCommand cmd) =>
+        FaceToward(cmd.X, cmd.Y, cmd.Z);
+
+    public void SetCameraPitch(float pitchRadians)
+    {
+        var pitch = Mathf.Clamp(pitchRadians, _controller.Settings.CameraPitchMin, _controller.Settings.CameraPitchMax);
+        var rot = _springArm.Rotation;
+        rot.X = pitch;
+        _springArm.Rotation = rot;
+        _controller.SetPitch(pitch);
+    }
+
+    public void FaceToward(float worldX, float worldY, float worldZ)
+    {
+        var target = new Vector3(worldX, worldY, worldZ);
+        var pivotPos = _cameraPivot.GlobalPosition;
+        var delta = target - pivotPos;
+
+        var yaw = Mathf.Atan2(-delta.X, -delta.Z);
+        var pivotRot = _cameraPivot.Rotation;
+        pivotRot.Y = yaw;
+        _cameraPivot.Rotation = pivotRot;
+
+        var horizontal = Mathf.Sqrt(delta.X * delta.X + delta.Z * delta.Z);
+        var pitch = Mathf.Atan2(-delta.Y, horizontal);
+        SetCameraPitch(pitch);
+    }
+
+    [Route]
     public void On(BulletSpawnRequested cmd)
     {
         if (BulletScene == null)
