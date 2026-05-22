@@ -22,6 +22,16 @@
 
 コマンドは「状態を変える意図」のみを担い、読み取りはクエリ経由とする。
 
+## イベントバス：VitalRouter の採用
+
+コマンドの配送には **VitalRouter** を使用する。
+
+- **Source Generator による型安全なディスパッチ**：`[Routes]`/`[Route]` 属性だけでハンドラを登録でき、文字列ベースのディスパッチが発生しない
+- **Godot Node への適用**：`CharacterBody3D` などの Godot Node クラスにも `[Routes]` を付与できるため、System と Node で同じコマンドバスを共有できる
+- **async/await 対応**：`PublishAsync` が `ValueTask` を返すため、ハンドラが非同期処理を持つ場合も自然に扱える
+
+代替として検討した C# `event` や MediatR は、Godot Node との統合が煩雑になるか、DI コンテナへの依存が重くなるため採用しなかった。
+
 ## Consequences
 
 - 毎フレームの位置読み取りにコマンドバスのオーバーヘッドがかからない
