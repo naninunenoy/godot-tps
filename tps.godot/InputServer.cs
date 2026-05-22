@@ -217,9 +217,14 @@ public partial class InputServer : Node
         return pngBytes;
     }
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private static void SendJsonResponse<T>(StreamPeerTcp peer, int status, T payload)
     {
-        var json = JsonSerializer.Serialize(payload);
+        var json = JsonSerializer.Serialize(payload, _jsonOptions);
         var bodyBytes = Encoding.UTF8.GetBytes(json);
         WriteResponse(peer, status, bodyBytes, "application/json; charset=utf-8");
     }
