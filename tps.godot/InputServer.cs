@@ -45,6 +45,7 @@ public partial class InputServer : Node
 
     private async void HandleConnectionAsync(StreamPeerTcp peer)
     {
+        var responseSent = false;
         try
         {
             var (method, path, body) = await ReadRequestAsync(peer);
@@ -93,10 +94,16 @@ public partial class InputServer : Node
             {
                 SendTextResponse(peer, 404, $"not found: {path}");
             }
+            responseSent = true;
         }
         catch (Exception ex)
         {
             GD.PrintErr($"[InputServer] {ex.Message}");
+            if (!responseSent)
+            {
+                try { SendTextResponse(peer, 500, ex.Message); }
+                catch { /* peer may already be closed */ }
+            }
         }
         finally
         {
@@ -114,6 +121,11 @@ public partial class InputServer : Node
         while (headerEnd < 0)
         {
             peer.Poll();
+
+            var status = peer.GetStatus();
+            if (status is StreamPeerTcp.Status.None or StreamPeerTcp.Status.Error)
+                throw new System.IO.IOException($"Connection dropped (status={status})");
+
             var available = peer.GetAvailableBytes();
             if (available > 0)
             {
