@@ -105,10 +105,6 @@ public partial class Player : CharacterBody3D
                 _logger.LogDebug("Reload started ammo={Ammo}/{Max}", w?.CurrentAmmo, w?.MagazineSize);
             }
         }
-        if (@event.IsActionPressed("aim"))
-            _weaponSystem.SetAiming(_entity.Id, true);
-        else if (@event.IsActionReleased("aim"))
-            _weaponSystem.SetAiming(_entity.Id, false);
     }
 
     public override void _Process(double delta)
@@ -121,6 +117,8 @@ public partial class Player : CharacterBody3D
         var weapon = _entity.Get<WeaponComponent>();
         if (weapon?.NeedsReload == true)
             _weaponSystem.TryStartReload(_entity.Id);
+
+        _weaponSystem.SetAiming(_entity.Id, Input.IsActionPressed("aim"));
 
         if (Input.IsActionPressed("fire"))
             TryFire();
@@ -232,10 +230,15 @@ public partial class Player : CharacterBody3D
 
     private void TryFire()
     {
+        var ads = _entity.Get<AdsComponent>();
         if (!_weaponSystem.TryFire(_entity.Id))
+        {
+            _logger.LogInformation("TryFire skipped (IsAiming={IsAiming}, CanFire={CanFire})",
+                ads?.IsAiming, _entity.Get<WeaponComponent>()?.CanFire);
             return;
+        }
         var w = _entity.Get<WeaponComponent>();
-        _logger.LogDebug("Fire ammo={Ammo}/{Max}", w?.CurrentAmmo, w?.MagazineSize);
+        _logger.LogInformation("Fire ammo={Ammo}/{Max}", w?.CurrentAmmo, w?.MagazineSize);
     }
 
     private void UpdateAimFeedback()

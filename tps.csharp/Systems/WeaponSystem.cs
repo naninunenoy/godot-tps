@@ -15,10 +15,6 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
 
     public bool TryFire(EntityId id)
     {
-        var ads = world.GetComponent<AdsComponent>(id);
-        if (ads is null || !ads.IsAiming)
-            return false;
-
         var weapon = world.GetComponent<WeaponComponent>(id);
         if (weapon is null || !weapon.CanFire)
             return false;

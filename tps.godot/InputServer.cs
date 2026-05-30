@@ -65,7 +65,7 @@ public partial class InputServer : Node
             }
             else if (method == "POST" && path == InputEndpoints.PressAction)
             {
-                var response = await HandlePressActionAsync(body);
+                var response = HandlePressActionAsync(body);
                 SendJsonResponse(peer, 200, response);
             }
             else if (method == "GET" && path == InputEndpoints.Screenshot)
@@ -220,7 +220,7 @@ public partial class InputServer : Node
         return (method, path, Encoding.UTF8.GetString(bodyBytes.Take(contentLength).ToArray()));
     }
 
-    private async Task<PressActionResponse> HandlePressActionAsync(string body)
+    private PressActionResponse HandlePressActionAsync(string body)
     {
         var request = JsonSerializer.Deserialize<PressActionRequest>(body);
         if (request is null || string.IsNullOrEmpty(request.Action))
@@ -231,16 +231,21 @@ public partial class InputServer : Node
 
         GD.Print($"[InputServer] ActionPress: {request.Action} ({request.DurationMs}ms)");
         Input.ActionPress(request.Action);
-        await ToSignal(
-            GetTree().CreateTimer(request.DurationMs / 1000.0),
-            SceneTreeTimer.SignalName.Timeout
-        );
-        Input.ActionRelease(request.Action);
+        ReleaseActionAfterDelay(request.Action, request.DurationMs);
 
         return new PressActionResponse(
             true,
             $"pressed {request.Action} for {request.DurationMs}ms"
         );
+    }
+
+    private async void ReleaseActionAfterDelay(string action, int durationMs)
+    {
+        await ToSignal(
+            GetTree().CreateTimer(durationMs / 1000.0),
+            SceneTreeTimer.SignalName.Timeout
+        );
+        Input.ActionRelease(action);
     }
 
     private async Task<byte[]> HandleScreenshotAsync()
@@ -320,7 +325,8 @@ public partial class InputServer : Node
                 }
                 if (camera is not null)
                     muzzleDir = new Vec3Dto(camera.Forward.X, camera.Forward.Y, camera.Forward.Z);
-                weaponDto = new WeaponDto(weapon.CurrentAmmo, weapon.MagazineSize, weapon.IsReloading, muzzlePos, muzzleDir);
+                var ads = obj.GetComponent<AdsComponent>();
+                weaponDto = new WeaponDto(weapon.CurrentAmmo, weapon.MagazineSize, weapon.IsReloading, muzzlePos, muzzleDir, ads?.IsAiming);
             }
 
             BoundsDto? boundsDto = null;
