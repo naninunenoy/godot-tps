@@ -19,6 +19,10 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
         if (weapon is null || !weapon.CanFire)
             return false;
 
+        var ads = world.GetComponent<AdsComponent>(id);
+        if (ads is null || !ads.IsAiming)
+            return false;
+
         var camera = world.GetComponent<CameraComponent>(id);
         var direction = camera?.Forward ?? System.Numerics.Vector3.UnitZ;
 

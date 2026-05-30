@@ -62,14 +62,14 @@ public class WeaponSystemTest
     }
 
     /// <summary>
-    /// ADS中でなくてもTryFire()がtrueを返すこと（hipfire許可）。
+    /// ADS中でないときTryFire()がfalseを返すこと（hipfire禁止）。
     /// </summary>
     [Fact]
-    public void TryFireWithoutAdsReturnsTrue()
+    public void TryFireWithoutAdsReturnsFalse()
     {
         var (world, system, id) = Setup();
         world.SetComponent(id, new AdsComponent(IsAiming: false));
-        system.TryFire(id).ShouldBeTrue();
+        system.TryFire(id).ShouldBeFalse();
     }
 
     /// <summary>
