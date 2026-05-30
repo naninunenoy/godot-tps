@@ -15,7 +15,7 @@ public partial class Target : StaticBody3D
     public int MaxHp = 3;
 
     [Export]
-    public float RespawnDelay = 3f;
+    public float RespawnDelay = 10f;
 
     private Entity _entity = null!;
     private HealthSystem _healthSystem = null!;
