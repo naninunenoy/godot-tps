@@ -76,6 +76,10 @@ public partial class Player : CharacterBody3D
         _subscription = this.MapTo(_router);
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _logger.LogInformation("Player ready (IsDebugBuild={IsDebug})", OS.IsDebugBuild());
+
+        var weapon = _entity.Get<WeaponComponent>();
+        if (weapon is not null)
+            _ = _router.PublishAsync(new AmmoChangedCommand { CurrentAmmo = weapon.CurrentAmmo, MagazineSize = weapon.MagazineSize, IsReloading = false });
     }
 
     public override void _ExitTree()

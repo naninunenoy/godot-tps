@@ -23,6 +23,7 @@ public partial class Hud : Control
     public Color CrossColor = new(1f, 1f, 1f, 0.85f);
 
     private Label _killCountLabel = null!;
+    private Label _ammoLabel = null!;
     private IDisposable? _subscription;
     private readonly ILogger<Hud> _logger = AppLogger.For<Hud>();
 
@@ -32,6 +33,8 @@ public partial class Hud : Control
         MouseFilter = MouseFilterEnum.Ignore;
         _killCountLabel = GetNode<Label>("KillCountLabel");
         _killCountLabel.Text = "Kills: 0";
+        _ammoLabel = GetNode<Label>("AmmoLabel");
+        _ammoLabel.Text = "-- / --";
     }
 
     public void Initialize(Router router)
@@ -50,6 +53,13 @@ public partial class Hud : Control
     {
         _killCountLabel.Text = $"Kills: {cmd.Count}";
         _logger.LogDebug("Kill count updated: {Count}", cmd.Count);
+    }
+
+    [Route]
+    public void On(AmmoChangedCommand cmd)
+    {
+        _ammoLabel.Text = cmd.IsReloading ? "RELOADING..." : $"{cmd.CurrentAmmo} / {cmd.MagazineSize}";
+        _logger.LogDebug("Ammo updated: {Current}/{Max} reloading={IsReloading}", cmd.CurrentAmmo, cmd.MagazineSize, cmd.IsReloading);
     }
 
     [Route]

@@ -30,6 +30,7 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
         world.SetComponent(id, weapon with { CurrentAmmo = ammoLeft, FireCooldown = weapon.FireInterval });
 
         _ = router.PublishAsync(new ShotFiredCommand { AmmoLeft = ammoLeft });
+        _ = router.PublishAsync(new AmmoChangedCommand { CurrentAmmo = ammoLeft, MagazineSize = weapon.MagazineSize, IsReloading = false });
         _ = router.PublishAsync(new BulletSpawnRequested
         {
             Direction = direction,
@@ -60,6 +61,8 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
             return false;
 
         world.SetComponent(id, weapon with { ReloadTimer = weapon.ReloadDuration, CurrentAmmo = 0 });
+
+        _ = router.PublishAsync(new AmmoChangedCommand { CurrentAmmo = 0, MagazineSize = weapon.MagazineSize, IsReloading = true });
 
         logStore?.Add(
             new GameLogEntry(
@@ -104,6 +107,9 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
                 CurrentAmmo = ammo,
             }
         );
+
+        if (reloadCompleted)
+            _ = router.PublishAsync(new AmmoChangedCommand { CurrentAmmo = ammo, MagazineSize = weapon.MagazineSize, IsReloading = false });
 
         if (reloadCompleted)
             logStore?.Add(
