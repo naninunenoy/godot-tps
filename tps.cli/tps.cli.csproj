@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.8" />
+    <PackageReference Include="ConsoleAppFramework" Version="5.*" />
     <PackageReference Include="ToonEncoder" Version="2.0.0" />
   </ItemGroup>
 
