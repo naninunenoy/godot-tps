@@ -1,3 +1,3 @@
-namespace tps.contract;
+namespace tps.contract.Mcp;
 
 public record CommandListResponse(string[] Commands);

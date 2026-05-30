@@ -1,5 +1,5 @@
 using VitalRouter;
 
-namespace tps.contract;
+namespace tps.contract.GameCommand;
 
 public partial struct QuitRequestedCommand : ICommand { }

@@ -1,7 +1,8 @@
 using System;
 using Godot;
 using Microsoft.Extensions.Logging;
-using tps.contract;
+using tps.contract.GameCommand;
+using tps.contract.Mcp;
 using tps.csharp;
 using tps.Logging;
 using VitalRouter;
@@ -183,11 +184,11 @@ public partial class Player : CharacterBody3D
     }
 
     [Route]
-    public void On(SetCameraPitchCommand cmd) =>
+    public void On(SetCameraPitchRequest cmd) =>
         SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
 
     [Route]
-    public void On(LookAtPositionCommand cmd) =>
+    public void On(LookAtPositionRequest cmd) =>
         FaceToward(cmd.X, cmd.Y, cmd.Z);
 
     public void SetCameraPitch(float pitchRadians)

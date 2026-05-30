@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using tps.contract;
+using tps.contract.GameCommand;
 using VitalRouter;
 
 namespace tps.csharp;

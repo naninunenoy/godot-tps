@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
-using tps.contract;
+using tps.contract.Mcp;
 
 namespace tps.mcp;
 

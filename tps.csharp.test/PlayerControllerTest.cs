@@ -1,6 +1,6 @@
 using System.Numerics;
 using Shouldly;
-using tps.contract;
+using tps.contract.GameCommand;
 using VitalRouter;
 
 namespace tps.csharp.test;

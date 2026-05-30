@@ -1,4 +1,4 @@
-namespace tps.contract;
+namespace tps.contract.Mcp;
 
 public static class InputEndpoints
 {

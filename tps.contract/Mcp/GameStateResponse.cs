@@ -1,4 +1,4 @@
-namespace tps.contract;
+namespace tps.contract.Mcp;
 
 public record GameStateResponse(ulong FrameCount, int ObjectCount, ObjectSnapshotDto[] Objects);
 

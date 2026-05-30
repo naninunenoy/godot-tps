@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using tps;
-using tps.contract;
+using tps.contract.Mcp;
 using tps.csharp;
 
 public partial class InputServer : Node
@@ -99,7 +99,7 @@ public partial class InputServer : Node
                     SendTextResponse(peer, 503, "not initialized");
                 else
                 {
-                    var cmd = JsonSerializer.Deserialize<SetCameraPitchCommand>(body);
+                    var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
                     if (cmd is null)
                         SendTextResponse(peer, 400, "invalid request");
                     else
@@ -115,7 +115,7 @@ public partial class InputServer : Node
                     SendTextResponse(peer, 503, "not initialized");
                 else
                 {
-                    var cmd = JsonSerializer.Deserialize<LookAtPositionCommand>(body);
+                    var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
                     if (cmd is null)
                         SendTextResponse(peer, 400, "invalid request");
                     else

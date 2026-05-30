@@ -1,5 +1,5 @@
 using R3;
-using tps.contract;
+using tps.contract.GameCommand;
 using VitalRouter;
 
 namespace tps.csharp;

@@ -1,4 +1,5 @@
-using tps.contract;
+using tps.contract.GameCommand;
+using tps.contract.Mcp;
 
 namespace tps.csharp;
 
@@ -7,7 +8,7 @@ public sealed class InGameScene : IScene
     public IReadOnlyList<ICommandDescriptor> AvailableCommands =>
         [
             CommandDescriptor.Of<GamePauseRequestedCommand>(),
-            CommandDescriptor.Of<SetCameraPitchCommand>(),
-            CommandDescriptor.Of<LookAtPositionCommand>(),
+            CommandDescriptor.Of<SetCameraPitchRequest>(),
+            CommandDescriptor.Of<LookAtPositionRequest>(),
         ];
 }

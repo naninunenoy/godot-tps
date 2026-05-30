@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Cysharp.AI;
 using ModelContextProtocol.Server;
-using tps.contract;
+using tps.contract.Mcp;
 
 namespace tps.mcp;
 
@@ -17,7 +17,7 @@ public class CameraControlTools
         [Description("Pitch angle in degrees. Positive = look down, negative = look up.")] float pitchDegrees)
     {
         var content = new StringContent(
-            JsonSerializer.Serialize(new SetCameraPitchCommand(pitchDegrees)),
+            JsonSerializer.Serialize(new SetCameraPitchRequest(pitchDegrees)),
             Encoding.UTF8,
             "application/json"
         );
@@ -46,7 +46,7 @@ public class CameraControlTools
         [Description("World Z coordinate of the target")] float z)
     {
         var content = new StringContent(
-            JsonSerializer.Serialize(new LookAtPositionCommand(x, y, z)),
+            JsonSerializer.Serialize(new LookAtPositionRequest(x, y, z)),
             Encoding.UTF8,
             "application/json"
         );

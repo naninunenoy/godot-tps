@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Cysharp.AI;
 using ModelContextProtocol.Server;
-using tps.contract;
+using tps.contract.Mcp;
 
 namespace tps.mcp;
 
