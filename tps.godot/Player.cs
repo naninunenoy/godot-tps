@@ -94,6 +94,9 @@ public partial class Player : CharacterBody3D
         if (_controller is null)
             return;
 
+        if (GetTree().Paused)
+            return;
+
         if (@event is InputEventMouseMotion motion)
         {
             var (yawDelta, pitch) = _controller.CalcCameraAim(motion.Relative.X, motion.Relative.Y);
