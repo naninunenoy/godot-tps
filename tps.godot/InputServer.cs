@@ -5,11 +5,23 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
-using tps.contract;
+using tps;
+using tps.contract.Mcp;
+using tps.csharp;
 
 public partial class InputServer : Node
 {
     private readonly TcpServer _tcpServer = new();
+    private ISceneQuery? _sceneQuery;
+    private IScene? _scene;
+    private Player? _player;
+
+    public void Initialize(ISceneQuery sceneQuery, IScene scene, Player player)
+    {
+        _sceneQuery = sceneQuery;
+        _scene = scene;
+        _player = player;
+    }
 
     public override void _Ready()
     {
@@ -36,6 +48,7 @@ public partial class InputServer : Node
 
     private async void HandleConnectionAsync(StreamPeerTcp peer)
     {
+        var responseSent = false;
         try
         {
             var (method, path, body) = await ReadRequestAsync(peer);
@@ -52,7 +65,7 @@ public partial class InputServer : Node
             }
             else if (method == "POST" && path == InputEndpoints.PressAction)
             {
-                var response = await HandlePressActionAsync(body);
+                var response = HandlePressActionAsync(body);
                 SendJsonResponse(peer, 200, response);
             }
             else if (method == "GET" && path == InputEndpoints.Screenshot)
@@ -60,14 +73,88 @@ public partial class InputServer : Node
                 var imageBytes = await HandleScreenshotAsync();
                 SendBinaryResponse(peer, 200, imageBytes, "image/png");
             }
+            else if (method == "GET" && path == InputEndpoints.State)
+            {
+                if (_sceneQuery is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                    SendJsonResponse(peer, 200, BuildStateResponse());
+            }
+            else if (method == "GET" && path == InputEndpoints.Commands)
+            {
+                if (_scene is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                    SendJsonResponse(
+                        peer,
+                        200,
+                        new CommandListResponse(
+                            _scene.AvailableCommands.Select(c => c.Name).ToArray()
+                        )
+                    );
+            }
+            else if (method == "POST" && path == InputEndpoints.CameraPitch)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
+                    }
+                }
+            }
+            else if (method == "POST" && path == InputEndpoints.LookAt)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
+                    }
+                }
+            }
+            else if (method == "POST" && path == InputEndpoints.SetAiming)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.SetAiming(cmd.IsAiming);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
+                    }
+                }
+            }
             else
             {
                 SendTextResponse(peer, 404, $"not found: {path}");
             }
+            responseSent = true;
         }
         catch (Exception ex)
         {
             GD.PrintErr($"[InputServer] {ex.Message}");
+            if (!responseSent)
+            {
+                try { SendTextResponse(peer, 500, ex.Message); }
+                catch { /* peer may already be closed */ }
+            }
         }
         finally
         {
@@ -75,7 +162,9 @@ public partial class InputServer : Node
         }
     }
 
-    private async Task<(string method, string path, string body)> ReadRequestAsync(StreamPeerTcp peer)
+    private async Task<(string method, string path, string body)> ReadRequestAsync(
+        StreamPeerTcp peer
+    )
     {
         var rawBytes = new List<byte>();
         var headerEnd = -1;
@@ -83,6 +172,11 @@ public partial class InputServer : Node
         while (headerEnd < 0)
         {
             peer.Poll();
+
+            var status = peer.GetStatus();
+            if (status is StreamPeerTcp.Status.None or StreamPeerTcp.Status.Error)
+                throw new System.IO.IOException($"Connection dropped (status={status})");
+
             var available = peer.GetAvailableBytes();
             if (available > 0)
             {
@@ -92,8 +186,12 @@ public partial class InputServer : Node
 
                 for (var i = 0; i <= rawBytes.Count - 4; i++)
                 {
-                    if (rawBytes[i] == '\r' && rawBytes[i + 1] == '\n' &&
-                        rawBytes[i + 2] == '\r' && rawBytes[i + 3] == '\n')
+                    if (
+                        rawBytes[i] == '\r'
+                        && rawBytes[i + 1] == '\n'
+                        && rawBytes[i + 2] == '\r'
+                        && rawBytes[i + 3] == '\n'
+                    )
                     {
                         headerEnd = i;
                         break;
@@ -138,7 +236,7 @@ public partial class InputServer : Node
         return (method, path, Encoding.UTF8.GetString(bodyBytes.Take(contentLength).ToArray()));
     }
 
-    private async Task<PressActionResponse> HandlePressActionAsync(string body)
+    private PressActionResponse HandlePressActionAsync(string body)
     {
         var request = JsonSerializer.Deserialize<PressActionRequest>(body);
         if (request is null || string.IsNullOrEmpty(request.Action))
@@ -149,10 +247,21 @@ public partial class InputServer : Node
 
         GD.Print($"[InputServer] ActionPress: {request.Action} ({request.DurationMs}ms)");
         Input.ActionPress(request.Action);
-        await ToSignal(GetTree().CreateTimer(request.DurationMs / 1000.0), SceneTreeTimer.SignalName.Timeout);
-        Input.ActionRelease(request.Action);
+        ReleaseActionAfterDelay(request.Action, request.DurationMs);
 
-        return new PressActionResponse(true, $"pressed {request.Action} for {request.DurationMs}ms");
+        return new PressActionResponse(
+            true,
+            $"pressed {request.Action} for {request.DurationMs}ms"
+        );
+    }
+
+    private async void ReleaseActionAfterDelay(string action, int durationMs)
+    {
+        await ToSignal(
+            GetTree().CreateTimer(durationMs / 1000.0),
+            SceneTreeTimer.SignalName.Timeout
+        );
+        Input.ActionRelease(action);
     }
 
     private async Task<byte[]> HandleScreenshotAsync()
@@ -164,9 +273,14 @@ public partial class InputServer : Node
         return pngBytes;
     }
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private static void SendJsonResponse<T>(StreamPeerTcp peer, int status, T payload)
     {
-        var json = JsonSerializer.Serialize(payload);
+        var json = JsonSerializer.Serialize(payload, _jsonOptions);
         var bodyBytes = Encoding.UTF8.GetBytes(json);
         WriteResponse(peer, status, bodyBytes, "application/json; charset=utf-8");
     }
@@ -177,15 +291,75 @@ public partial class InputServer : Node
         WriteResponse(peer, status, bodyBytes, "text/plain; charset=utf-8");
     }
 
-    private static void SendBinaryResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    private static void SendBinaryResponse(
+        StreamPeerTcp peer,
+        int status,
+        byte[] bodyBytes,
+        string contentType
+    )
     {
         WriteResponse(peer, status, bodyBytes, contentType);
     }
 
-    private static void WriteResponse(StreamPeerTcp peer, int status, byte[] bodyBytes, string contentType)
+    private static void WriteResponse(
+        StreamPeerTcp peer,
+        int status,
+        byte[] bodyBytes,
+        string contentType
+    )
     {
-        var statusText = status switch { 200 => "OK", 404 => "Not Found", _ => "Error" };
-        var header = $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
+        var statusText = status switch
+        {
+            200 => "OK",
+            404 => "Not Found",
+            _ => "Error",
+        };
+        var header =
+            $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
         peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+    }
+
+    private GameStateResponse BuildStateResponse()
+    {
+        var objects = _sceneQuery!.Snapshot.Select(obj =>
+        {
+            var health = obj.GetComponent<HealthComponent>();
+            var weapon = obj.GetComponent<WeaponComponent>();
+            var transform = obj.GetComponent<TransformComponent>();
+            var camera = obj.GetComponent<CameraComponent>();
+            var bounds = obj.GetComponent<BoundsComponent>();
+
+            WeaponDto? weaponDto = null;
+            if (weapon is not null)
+            {
+                Vec3Dto? muzzlePos = null;
+                Vec3Dto? muzzleDir = null;
+                if (transform is not null)
+                {
+                    var pos = transform.Position;
+                    muzzlePos = new Vec3Dto(pos.X, pos.Y + 1.3f, pos.Z);
+                }
+                if (camera is not null)
+                    muzzleDir = new Vec3Dto(camera.Forward.X, camera.Forward.Y, camera.Forward.Z);
+                var ads = obj.GetComponent<AdsComponent>();
+                weaponDto = new WeaponDto(weapon.CurrentAmmo, weapon.MagazineSize, weapon.IsReloading, muzzlePos, muzzleDir, ads?.IsAiming);
+            }
+
+            BoundsDto? boundsDto = null;
+            if (bounds is not null)
+                boundsDto = new BoundsDto(
+                    new Vec3Dto(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
+                    new Vec3Dto(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)
+                );
+
+            return new ObjectSnapshotDto(
+                obj.Id.AsPrimitive(),
+                obj.Name,
+                health is not null ? new HealthDto(health.Hp, health.MaxHp) : null,
+                weaponDto,
+                boundsDto
+            );
+        }).ToArray();
+        return new GameStateResponse(_sceneQuery.FrameCount, _sceneQuery.ObjectCount, objects);
     }
 }

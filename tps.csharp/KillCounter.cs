@@ -1,5 +1,5 @@
 using R3;
-using tps.contract;
+using tps.contract.GameCommand;
 using VitalRouter;
 
 namespace tps.csharp;
@@ -9,7 +9,7 @@ public sealed partial class KillCounter : IDisposable
 {
     private readonly Router _router;
     private readonly ReactiveProperty<int> _count = new(0);
-    private IDisposable? _subscription;
+    private readonly IDisposable? _subscription;
 
     public ReadOnlyReactiveProperty<int> Count => _count;
 

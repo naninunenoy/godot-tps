@@ -1,5 +1,5 @@
 using System.Numerics;
-using tps.contract;
+using tps.contract.GameCommand;
 using VitalRouter;
 
 namespace tps.csharp;
@@ -25,12 +25,21 @@ public sealed class PlayerController : IDisposable
         Vector3 camRight,
         bool isOnFloor,
         bool jumpPressed,
-        float delta)
+        float delta
+    )
     {
         _velocity = PlayerMovement.CalcVelocity(
-            inputDir, camForward, camRight, _velocity,
-            isOnFloor, jumpPressed,
-            Settings.Speed, Settings.JumpVelocity, Settings.Gravity, delta);
+            inputDir,
+            camForward,
+            camRight,
+            _velocity,
+            isOnFloor,
+            jumpPressed,
+            Settings.Speed,
+            Settings.JumpVelocity,
+            Settings.Gravity,
+            delta
+        );
 
         _ = _router.PublishAsync(new PlayerMoveCommand { Velocity = _velocity });
         return _velocity;
@@ -44,12 +53,22 @@ public sealed class PlayerController : IDisposable
     {
         var yawDelta = CameraAim.CalcYawDelta(mouseDeltaX, Settings.MouseSensitivity);
         _cameraPitch = CameraAim.ClampPitch(
-            _cameraPitch, mouseDeltaY,
+            _cameraPitch,
+            mouseDeltaY,
             Settings.MouseSensitivity,
-            Settings.CameraPitchMin, Settings.CameraPitchMax);
+            Settings.CameraPitchMin,
+            Settings.CameraPitchMax
+        );
 
-        _ = _router.PublishAsync(new CameraOrientCommand { YawDelta = yawDelta, Pitch = _cameraPitch });
+        _ = _router.PublishAsync(
+            new CameraOrientCommand { YawDelta = yawDelta, Pitch = _cameraPitch }
+        );
         return (yawDelta, _cameraPitch);
+    }
+
+    public void SetPitch(float pitch)
+    {
+        _cameraPitch = Math.Clamp(pitch, Settings.CameraPitchMin, Settings.CameraPitchMax);
     }
 
     public void Dispose() { }

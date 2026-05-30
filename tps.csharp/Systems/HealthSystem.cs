@@ -1,0 +1,55 @@
+using Microsoft.Extensions.Logging;
+using tps.contract.GameCommand;
+using VitalRouter;
+
+namespace tps.csharp;
+
+public sealed class HealthSystem(World world, Router router, ILogStore? logStore = null)
+{
+    public bool TakeDamage(EntityId id, int amount)
+    {
+        var hp = world.GetComponent<HealthComponent>(id);
+        if (hp is null || !hp.IsAlive)
+            return false;
+
+        var newHp = Math.Max(0, hp.Hp - amount);
+        world.SetComponent(id, hp with { Hp = newHp });
+
+        logStore?.Add(
+            new GameLogEntry(
+                LogLevel.Information,
+                GameEvents.TargetHit,
+                new Dictionary<string, object?>
+                {
+                    ["EntityId"] = id.AsPrimitive(),
+                    ["Damage"] = amount,
+                    ["HpAfter"] = newHp,
+                },
+                DateTimeOffset.UtcNow
+            )
+        );
+
+        if (newHp == 0)
+        {
+            logStore?.Add(
+                new GameLogEntry(
+                    LogLevel.Information,
+                    GameEvents.TargetDestroyed,
+                    new Dictionary<string, object?> { ["EntityId"] = id.AsPrimitive() },
+                    DateTimeOffset.UtcNow
+                )
+            );
+            _ = router.PublishAsync(new TargetDestroyedCommand { TargetName = id.AsPrimitive() });
+        }
+
+        return true;
+    }
+
+    public void Reset(EntityId id)
+    {
+        var hp = world.GetComponent<HealthComponent>(id);
+        if (hp is null)
+            return;
+        world.SetComponent(id, hp with { Hp = hp.MaxHp });
+    }
+}

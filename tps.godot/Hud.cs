@@ -1,8 +1,7 @@
 using System;
 using Godot;
 using Microsoft.Extensions.Logging;
-using tps.contract;
-using tps.csharp;
+using tps.contract.GameCommand;
 using tps.Logging;
 using VitalRouter;
 
@@ -11,12 +10,21 @@ namespace tps;
 [Routes]
 public partial class Hud : Control
 {
-    [Export] public float CrossSize = 14f;
-    [Export] public float CrossGap  =  4f;
-    [Export] public float LineWidth =  2f;
-    [Export] public Color CrossColor = new(1f, 1f, 1f, 0.85f);
+    [Export]
+    public float CrossSize = 14f;
+
+    [Export]
+    public float CrossGap = 4f;
+
+    [Export]
+    public float LineWidth = 2f;
+
+    [Export]
+    public Color CrossColor = new(1f, 1f, 1f, 0.85f);
 
     private Label _killCountLabel = null!;
+    private Label _ammoLabel = null!;
+    private Label _adsLabel = null!;
     private IDisposable? _subscription;
     private readonly ILogger<Hud> _logger = AppLogger.For<Hud>();
 
@@ -26,7 +34,15 @@ public partial class Hud : Control
         MouseFilter = MouseFilterEnum.Ignore;
         _killCountLabel = GetNode<Label>("KillCountLabel");
         _killCountLabel.Text = "Kills: 0";
-        _subscription = this.MapTo(GameRouter.Default);
+        _ammoLabel = GetNode<Label>("AmmoLabel");
+        _ammoLabel.Text = "-- / --";
+        _adsLabel = GetNode<Label>("AdsLabel");
+        _adsLabel.Text = "ADS: OFF";
+    }
+
+    public void Initialize(Router router)
+    {
+        _subscription = this.MapTo(router);
         _logger.LogDebug("Hud ready");
     }
 
@@ -42,6 +58,26 @@ public partial class Hud : Control
         _logger.LogDebug("Kill count updated: {Count}", cmd.Count);
     }
 
+    [Route]
+    public void On(AdsStateChangedCommand cmd)
+    {
+        _adsLabel.Text = cmd.IsAiming ? "ADS: ON" : "ADS: OFF";
+    }
+
+    [Route]
+    public void On(AmmoChangedCommand cmd)
+    {
+        _ammoLabel.Text = cmd.IsReloading ? "RELOADING..." : $"{cmd.CurrentAmmo} / {cmd.MagazineSize}";
+        _logger.LogDebug("Ammo updated: {Current}/{Max} reloading={IsReloading}", cmd.CurrentAmmo, cmd.MagazineSize, cmd.IsReloading);
+    }
+
+    [Route]
+    public void On(AimUpdatedCommand cmd)
+    {
+        CrossColor = cmd.IsOnTarget ? new Color(1f, 0.2f, 0.2f, 0.95f) : new Color(1f, 1f, 1f, 0.85f);
+        QueueRedraw();
+    }
+
     public override void _Draw()
     {
         var center = Size / 2f;
@@ -49,19 +85,27 @@ public partial class Hud : Control
         DrawLine(
             center + new Vector2(-(CrossGap + CrossSize), 0),
             center + new Vector2(-CrossGap, 0),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
         DrawLine(
             center + new Vector2(CrossGap, 0),
             center + new Vector2(CrossGap + CrossSize, 0),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
 
         DrawLine(
             center + new Vector2(0, -(CrossGap + CrossSize)),
             center + new Vector2(0, -CrossGap),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
         DrawLine(
             center + new Vector2(0, CrossGap),
             center + new Vector2(0, CrossGap + CrossSize),
-            CrossColor, LineWidth);
+            CrossColor,
+            LineWidth
+        );
     }
 }

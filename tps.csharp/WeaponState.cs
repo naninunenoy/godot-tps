@@ -1,4 +1,3 @@
-using System;
 using R3;
 
 namespace tps.csharp;
@@ -50,7 +49,8 @@ public class WeaponState : IDisposable
 
     public bool TryFire()
     {
-        if (!CanFire) return false;
+        if (!CanFire)
+            return false;
         _currentAmmo.Value--;
         _fireCooldown = FireInterval;
         _onFired.OnNext(Unit.Default);
@@ -59,7 +59,8 @@ public class WeaponState : IDisposable
 
     public bool TryStartReload()
     {
-        if (IsReloading || _currentAmmo.Value == MagazineSize) return false;
+        if (IsReloading || _currentAmmo.Value == MagazineSize)
+            return false;
         _reloadTimer = ReloadDuration;
         _currentAmmo.Value = 0;
         return true;

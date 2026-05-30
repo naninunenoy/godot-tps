@@ -1,6 +1,5 @@
 using System.Numerics;
 using Shouldly;
-using tps.csharp;
 
 namespace tps.csharp.test;
 
@@ -18,9 +17,24 @@ public class PlayerMovementTest
         float speed = 5f,
         float jumpVel = 5f,
         float gravity = 9.8f,
-        float delta = 0f)
-        => PlayerMovement.CalcVelocity(input, Forward, Right, vel, onFloor, jump, speed, jumpVel, gravity, delta);
+        float delta = 0f
+    ) =>
+        PlayerMovement.CalcVelocity(
+            input,
+            Forward,
+            Right,
+            vel,
+            onFloor,
+            jump,
+            speed,
+            jumpVel,
+            gravity,
+            delta
+        );
 
+    /// <summary>
+    /// 入力なし・床上・delta=1fのとき水平速度(X, Z)がゼロに減速すること。
+    /// </summary>
     [Fact]
     public void IdleOnFloorDeceleratesHorizontalVelocity()
     {
@@ -29,6 +43,9 @@ public class PlayerMovementTest
         result.Z.ShouldBe(0f);
     }
 
+    /// <summary>
+    /// 前方入力(0,-1)でZ速度が-5f(前方向)になること。
+    /// </summary>
     [Fact]
     public void MovingForwardAppliesSpeedInNegativeZ()
     {
@@ -38,6 +55,9 @@ public class PlayerMovementTest
         result.Z.ShouldBe(-5f, 0.001f);
     }
 
+    /// <summary>
+    /// 右入力(1,0)でX速度が+5f(右方向)になること。
+    /// </summary>
     [Fact]
     public void StrafeRightAppliesSpeedInPositiveX()
     {
@@ -46,6 +66,9 @@ public class PlayerMovementTest
         result.Z.ShouldBe(0f, 0.001f);
     }
 
+    /// <summary>
+    /// 斜め入力(1,-1)でも水平速度の大きさがspeed(5f)に正規化されること。
+    /// </summary>
     [Fact]
     public void DiagonalInputIsNormalized()
     {
@@ -54,6 +77,9 @@ public class PlayerMovementTest
         horizontal.ShouldBe(5f, 0.01f);
     }
 
+    /// <summary>
+    /// 床上でジャンプ入力するとY速度がjumpVel(5f)になること。
+    /// </summary>
     [Fact]
     public void JumpOnFloorSetsYVelocity()
     {
@@ -61,6 +87,9 @@ public class PlayerMovementTest
         result.Y.ShouldBe(5f);
     }
 
+    /// <summary>
+    /// 空中でジャンプ入力してもY速度が変化しないこと（0fのまま）。
+    /// </summary>
     [Fact]
     public void JumpNotAppliedWhenAirborne()
     {
@@ -68,6 +97,9 @@ public class PlayerMovementTest
         result.Y.ShouldBe(0f);
     }
 
+    /// <summary>
+    /// 空中(isOnFloor=false)・delta=1fのとき重力(-9.8f)がY速度に加算されること。
+    /// </summary>
     [Fact]
     public void GravityAppliedWhenAirborne()
     {
@@ -75,6 +107,9 @@ public class PlayerMovementTest
         result.Y.ShouldBe(-9.8f, 0.001f);
     }
 
+    /// <summary>
+    /// 床上ではY速度が0のままで重力が適用されないこと。
+    /// </summary>
     [Fact]
     public void GravityNotAppliedWhenOnFloor()
     {
