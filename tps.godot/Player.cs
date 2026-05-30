@@ -218,7 +218,7 @@ public partial class Player : CharacterBody3D
         _cameraPivot.Rotation = pivotRot;
 
         var horizontal = Mathf.Sqrt(delta.X * delta.X + delta.Z * delta.Z);
-        var pitch = Mathf.Atan2(-delta.Y, horizontal);
+        var pitch = Mathf.Atan2(delta.Y, horizontal);
         SetCameraPitch(pitch);
     }
 

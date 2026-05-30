@@ -12,9 +12,9 @@ public class CameraControlTools
 {
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
 
-    [McpServerTool, Description("Set the player camera pitch (positive=look down, negative=look up). Range: -68.8° to 45.8°.")]
+    [McpServerTool, Description("Set the player camera pitch (positive=look up, negative=look down). Range: -68.8° to 45.8°.")]
     public static async Task<string> SetCameraPitch(
-        [Description("Pitch angle in degrees. Positive = look down, negative = look up.")] float pitchDegrees)
+        [Description("Pitch angle in degrees. Positive = look up, negative = look down.")] float pitchDegrees)
     {
         var content = new StringContent(
             JsonSerializer.Serialize(new SetCameraPitchRequest(pitchDegrees)),
