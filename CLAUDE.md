@@ -4,7 +4,8 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 
 ## 技術スタック
 
-- Godot 4.6 / C# (.NET 8) / Jolt Physics / Direct3D 12 (Windows) / Metal (macOS)
+- Godot 4.6 / C# (.NET 8・.NET 10) / Jolt Physics / Direct3D 12 (Windows) / Metal (macOS)
+  - `tps.godot` / `tps.csharp` / `tps.contract` / `tps.client` は net8.0、`tps.cli` / `tps.mcp` / `tps.csharp.test` は net10.0
 - プロジェクトディレクトリ: `tps.godot/`
 
 ## プロジェクト構成
@@ -74,7 +75,6 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 |---|---|
 | xUnit テスト（インプロセス） | オブジェクトそのまま |
 | MCP → LLM エージェント | ToonEncoder（トークン節約） |
-| プロセス間ログ転送 | MessagePack（サイズ効率） |
 | デバッグ確認・ファイル | JSONL（人間が読める） |
 
 - ログは文字列でなく**構造化ログストア**（型付きイベントレコード）で管理する

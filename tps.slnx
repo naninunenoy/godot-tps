@@ -5,5 +5,7 @@
   <Project Path="tps.csharp.test/tps.csharp.test.csproj" />
   <Project Path="tps.csharp/tps.csharp.csproj" />
   <Project Path="tps.contract/tps.contract.csproj" />
+  <Project Path="tps.client/tps.client.csproj" />
   <Project Path="tps.mcp/tps.mcp.csproj" />
+  <Project Path="tps.cli/tps.cli.csproj" />
 </Solution>
