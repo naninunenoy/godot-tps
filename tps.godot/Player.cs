@@ -230,10 +230,23 @@ public partial class Player : CharacterBody3D
         var bullet = BulletScene.Instantiate<Bullet>();
         bullet.Initialize(_router, cmd.Speed, cmd.Damage);
         GetTree().CurrentScene.AddChild(bullet);
-        var forward = -_camera.GlobalBasis.Z;
-        bullet.GlobalPosition = GlobalPosition + Vector3.Up * 1.3f + forward * 0.5f;
-        bullet.GlobalBasis = _camera.GlobalBasis;
-        _logger.LogDebug("Bullet spawned");
+
+        // カメラから着弾点を求め、マズルからその点へ向ける（TPS カメラ高さ補正）
+        var camOrigin = _camera.GlobalPosition;
+        var camForward = -_camera.GlobalBasis.Z;
+        var camEnd = camOrigin + camForward * 200f;
+        var rayQuery = PhysicsRayQueryParameters3D.Create(camOrigin, camEnd);
+        rayQuery.Exclude = [GetRid()];
+        var rayResult = GetWorld3D().DirectSpaceState.IntersectRay(rayQuery);
+        var aimPoint = rayResult.Count > 0
+            ? rayResult["position"].AsVector3()
+            : camEnd;
+
+        var muzzlePos = GlobalPosition + Vector3.Up * 1.3f + camForward * 0.5f;
+        var aimDir = (aimPoint - muzzlePos).Normalized();
+        bullet.GlobalPosition = muzzlePos;
+        bullet.LookAt(muzzlePos + aimDir);
+        _logger.LogDebug("Bullet spawned aimPoint={AimPoint}", aimPoint);
     }
 
     private void TryFire()

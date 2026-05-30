@@ -9,6 +9,7 @@ public static class AppLogger
     private static readonly ILoggerFactory Factory = LoggerFactory.Create(b =>
     {
         var level = OS.IsDebugBuild() ? LogLevel.Debug : LogLevel.Warning;
+        b.SetMinimumLevel(level);
         b.AddProvider(new GodotLoggerProvider(level));
         if (OS.IsDebugBuild())
         {

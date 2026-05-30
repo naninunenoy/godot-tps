@@ -38,12 +38,16 @@ public partial class Bullet : Node3D
 
         var query = PhysicsRayQueryParameters3D.Create(from, GlobalPosition);
         var result = GetWorld3D().DirectSpaceState.IntersectRay(query);
-        if (result.Count > 0 && result["collider"].AsGodotObject() is Target target)
+        if (result.Count > 0)
         {
-            _ = _router.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = _damage });
-            _logger.LogDebug("Bullet hit target={Name} damage={Damage}", target.Name, _damage);
-            QueueFree();
-            return;
+            var colliderId = result["collider_id"].AsUInt64();
+            if (GodotObject.InstanceFromId(colliderId) is Target target)
+            {
+                _ = _router.PublishAsync(new TargetHitCommand { TargetName = target.Name, Damage = _damage });
+                _logger.LogDebug("Bullet hit target={Name} damage={Damage}", target.Name, _damage);
+                QueueFree();
+                return;
+            }
         }
 
         if (_distanceTraveled >= MaxDistance)
