@@ -208,4 +208,17 @@ var root = new RootCommand("tps-cli: コマンドラインからゲームを操�
     root.Add(cmd);
 }
 
+// help
+{
+    var subArg = new Argument<string?>("command") { Description = "詳細を見るコマンド名", Arity = ArgumentArity.ZeroOrOne };
+    var cmd = new Command("help", "使い方を表示する (help <command> で個別コマンドの詳細)") { subArg };
+    cmd.SetAction((parseResult, ct) =>
+    {
+        var sub = parseResult.GetValue(subArg);
+        var target = sub is null ? "--help" : $"{sub} --help";
+        return root.Parse(target).InvokeAsync();
+    });
+    root.Add(cmd);
+}
+
 return await root.Parse(args).InvokeAsync();

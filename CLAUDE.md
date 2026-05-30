@@ -15,7 +15,9 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 | `tps.csharp/` | 純粋 C# クラスライブラリ。Godot 非依存のゲームロジック |
 | `tps.csharp.test/` | `tps.csharp` の単体テスト（xUnit + Shouldly） |
 | `tps.contract/` | コマンド定義など共有型 |
+| `tps.client/` | ゲーム HTTP 通信層。MCP・CLI 共通の `GameApiClient` |
 | `tps.mcp/` | MCP サーバー。ゲームへのコマンド投入・状態取得 |
+| `tps.cli/` | CLI ツール。ゲーム固有操作をコマンドラインから実行 |
 
 ## アーキテクチャ
 
@@ -105,3 +107,18 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 ## godot-mcp の使用ルール
 
 - `.tscn` / `.tres` などの Godot リソースファイルの情報取得・編集には godot-mcp ツールを使う（直接ファイル編集しない）
+
+## tps.cli の使い方
+
+使用可能なコマンドとオプションは `help` で確認すること：
+
+```bash
+# コマンド一覧
+dotnet run --project tps.cli/ -- help
+
+# 個別コマンドの詳細
+dotnet run --project tps.cli/ -- help <command>
+```
+
+- CLI はゲームが起動済みの状態でのみ使用できる（MCP の `run_project` で起動後）
+- `tps.client/GameApiClient.cs` が HTTP 通信層。MCP・CLI 両方が参照する
