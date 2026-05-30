@@ -80,6 +80,7 @@ public partial class Player : CharacterBody3D
         var weapon = _entity.Get<WeaponComponent>();
         if (weapon is not null)
             _ = _router.PublishAsync(new AmmoChangedCommand { CurrentAmmo = weapon.CurrentAmmo, MagazineSize = weapon.MagazineSize, IsReloading = false });
+        _ = _router.PublishAsync(new AdsStateChangedCommand { IsAiming = false });
     }
 
     public override void _ExitTree()

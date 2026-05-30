@@ -10,7 +10,9 @@ public sealed class WeaponSystem(World world, Router router, ILogStore? logStore
     {
         var ads = world.GetComponent<AdsComponent>(id);
         if (ads is null) return;
+        if (ads.IsAiming == isAiming) return;
         world.SetComponent(id, ads with { IsAiming = isAiming });
+        _ = router.PublishAsync(new AdsStateChangedCommand { IsAiming = isAiming });
     }
 
     public bool TryFire(EntityId id)

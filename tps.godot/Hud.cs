@@ -24,6 +24,7 @@ public partial class Hud : Control
 
     private Label _killCountLabel = null!;
     private Label _ammoLabel = null!;
+    private Label _adsLabel = null!;
     private IDisposable? _subscription;
     private readonly ILogger<Hud> _logger = AppLogger.For<Hud>();
 
@@ -35,6 +36,8 @@ public partial class Hud : Control
         _killCountLabel.Text = "Kills: 0";
         _ammoLabel = GetNode<Label>("AmmoLabel");
         _ammoLabel.Text = "-- / --";
+        _adsLabel = GetNode<Label>("AdsLabel");
+        _adsLabel.Text = "ADS: OFF";
     }
 
     public void Initialize(Router router)
@@ -53,6 +56,12 @@ public partial class Hud : Control
     {
         _killCountLabel.Text = $"Kills: {cmd.Count}";
         _logger.LogDebug("Kill count updated: {Count}", cmd.Count);
+    }
+
+    [Route]
+    public void On(AdsStateChangedCommand cmd)
+    {
+        _adsLabel.Text = cmd.IsAiming ? "ADS: ON" : "ADS: OFF";
     }
 
     [Route]
