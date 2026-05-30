@@ -125,6 +125,22 @@ public partial class InputServer : Node
                     }
                 }
             }
+            else if (method == "POST" && path == InputEndpoints.SetAiming)
+            {
+                if (_player is null)
+                    SendTextResponse(peer, 503, "not initialized");
+                else
+                {
+                    var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
+                    if (cmd is null)
+                        SendTextResponse(peer, 400, "invalid request");
+                    else
+                    {
+                        _player.SetAiming(cmd.IsAiming);
+                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
+                    }
+                }
+            }
             else
             {
                 SendTextResponse(peer, 404, $"not found: {path}");

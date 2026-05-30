@@ -198,6 +198,14 @@ public partial class Player : CharacterBody3D
         _controller.SetPitch(pitch);
     }
 
+    public void SetAiming(bool isAiming)
+    {
+        if (isAiming)
+            Input.ActionPress("aim");
+        else
+            Input.ActionRelease("aim");
+    }
+
     public void FaceToward(float worldX, float worldY, float worldZ)
     {
         var target = new Vector3(worldX, worldY, worldZ);

@@ -66,6 +66,37 @@ public class InputSimulationTools
         return new DataContent(bytes, "image/png");
     }
 
+    [McpServerTool, Description("Enable or disable ADS (Aim Down Sights) state. Persists until explicitly changed.")]
+    public static async Task<string> SetAiming(
+        [Description("true to enter ADS, false to exit ADS")] bool isAiming)
+    {
+        var request = new SetAimingRequest(isAiming);
+        var content = new StringContent(
+            JsonSerializer.Serialize(request),
+            Encoding.UTF8,
+            "application/json"
+        );
+        try
+        {
+            var response = await _http.PostAsync(
+                $"{InputEndpoints.BaseUrl}{InputEndpoints.SetAiming}",
+                content
+            );
+            if (!response.IsSuccessStatusCode)
+                return $"error: {response.StatusCode}";
+
+            var payload = await response.Content.ReadFromJsonAsync<PressActionResponse>();
+            if (payload is null)
+                return "error: empty response";
+
+            return payload.Success ? $"ok: {payload.Message}" : $"error: {payload.Message}";
+        }
+        catch (Exception ex)
+        {
+            return $"unreachable: {ex.Message}";
+        }
+    }
+
     [McpServerTool, Description("Simulate pressing a key action defined in Godot's InputMap.")]
     public static async Task<string> PressAction(
         [Description("The InputMap action name (e.g. 'ui_accept', 'move_forward')")] string action,

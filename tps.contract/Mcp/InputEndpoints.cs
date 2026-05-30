@@ -13,4 +13,5 @@ public static class InputEndpoints
     public const string Commands = "/commands";
     public const string CameraPitch = "/camera_pitch";
     public const string LookAt = "/look_at";
+    public const string SetAiming = "/set_aiming";
 }
