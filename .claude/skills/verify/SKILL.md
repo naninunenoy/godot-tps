@@ -20,9 +20,11 @@ godot-mcp を使ってゲームを起動し、ログを確認して動作確認�
    - 起動直後に `get_debug_output` でログを確認する
    - エラーや警告があればそこで報告する
 
-3. **操作が必要な場合は godot-ext を使う**
-   - `godot-ext` のツール（`press_action` など）は `run_project` 後でないと使用不可
-   - アクション確認が必要なら `get_actions` でアクション一覧を取得してから操作する
+3. **操作が必要な場合は godot-ext または tps.cli を使う**
+   - どちらも `run_project` でゲームを起動した後でないと使用不可
+   - `godot-ext` MCP ツール（`press_action`、`set_aiming` 等）を使うか、`tps.cli` を Bash で呼ぶ
+   - tps.cli の使い方は `dotnet run --project tps.cli/ -- help` で確認する
+   - アクション確認が必要なら `get_actions`（MCP）または `dotnet run --project tps.cli/ -- actions`（CLI）で一覧を取得してから操作する
 
 4. **結果を報告する**
    - 各確認項目について OK / NG を明示する
