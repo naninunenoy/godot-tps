@@ -2,26 +2,20 @@ using System.ComponentModel;
 using System.Text.Json;
 using Cysharp.AI;
 using ModelContextProtocol.Server;
-using tps.contract.Mcp;
+using tps.client;
 
 namespace tps.mcp;
 
 [McpServerToolType]
-public class GameStateTools
+public class GameStateTools(GameApiClient client)
 {
-    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
-
     [McpServerTool, Description("Get current game state (entities, health, weapons, frame count).")]
-    public static async Task<string> GetGameState()
+    public async Task<string> GetGameState()
     {
         try
         {
-            var response = await _http.GetAsync($"{InputEndpoints.BaseUrl}{InputEndpoints.State}");
-            if (!response.IsSuccessStatusCode)
-                return $"error: {response.StatusCode}";
-
-            var json = await response.Content.ReadAsStringAsync();
-            var element = JsonSerializer.Deserialize<JsonElement>(json);
+            var payload = await client.GetStateAsync();
+            var element = JsonSerializer.SerializeToElement(payload);
             return ToonEncoder.Encode(element);
         }
         catch (Exception ex)
@@ -31,18 +25,12 @@ public class GameStateTools
     }
 
     [McpServerTool, Description("Get available commands in the current game scene.")]
-    public static async Task<string> GetAvailableCommands()
+    public async Task<string> GetAvailableCommands()
     {
         try
         {
-            var response = await _http.GetAsync(
-                $"{InputEndpoints.BaseUrl}{InputEndpoints.Commands}"
-            );
-            if (!response.IsSuccessStatusCode)
-                return $"error: {response.StatusCode}";
-
-            var json = await response.Content.ReadAsStringAsync();
-            var element = JsonSerializer.Deserialize<JsonElement>(json);
+            var payload = await client.GetAvailableCommandsAsync();
+            var element = JsonSerializer.SerializeToElement(payload);
             return ToonEncoder.Encode(element);
         }
         catch (Exception ex)
