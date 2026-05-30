@@ -110,14 +110,14 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 
 ## tps.cli の使い方
 
-使用可能なコマンドとオプションは `help` で確認すること：
+使用可能なコマンドとオプションは `--help` で確認すること：
 
 ```bash
 # コマンド一覧
-dotnet run --project tps.cli/ -- help
+dotnet run --project tps.cli/ -- --help
 
 # 個別コマンドの詳細
-dotnet run --project tps.cli/ -- help <command>
+dotnet run --project tps.cli/ -- <command> --help
 ```
 
 - CLI はゲームが起動済みの状態でのみ使用できる（MCP の `run_project` で起動後）
