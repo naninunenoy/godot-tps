@@ -1,5 +1,9 @@
 # 計画: 汎用ゲーム基盤「gamekit」の切り出し
 
+> **Status: 全フェーズ完了（2026-06-11）**
+> Phase 1: `46275fc` / Phase 2: `d3c7b34` / Phase 3: `4b0fb12` / Phase 4: `e4257cb` / Phase 5: `7924d0b` / Phase 6: 本コミット。
+> 実施中の設計判断・トレードオフは [memo.md](memo.md)、正式な決定は [ADR-0012](docs/adr/0012-gamekit-foundation-extraction.md) を参照。
+
 ## 目的
 
 現在 `tps.*` に混在している「どのゲームでも使える概念」と「TPS 固有のゲーム実装」を分離し、

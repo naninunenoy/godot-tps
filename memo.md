@@ -186,3 +186,18 @@ ConsoleAppFramework v5 はソースジェネレータ前提で、コマンドク
 MCP サーバー（dotnet run）はセッション接続時に起動されるため、このフェーズの変更は
 **次回の MCP 接続（セッション再起動）から有効**になる。今セッションでは新コードの MCP 経路を
 直接検証できないため、同一実装経路（GetStateRawAsync → ToonEncoder）を CLI の `state` で検証した。
+
+## Phase 6: ドキュメント更新と ADR 昇格
+
+主要な設計判断（具象 Component を基盤に置かない / VitalRouter が公式コマンドバス /
+Node はゲーム側・基盤はプレーンクラス / state はゲーム定義 / エンドポイント分割 / CLI 非分割）は
+**ADR-0012 に正式化した**。以後この memo は「ADR に書くほどではない経緯・運用メモ・宿題」の
+置き場とし、恒久的なルールは ADR / CLAUDE.md 側を正とする。
+
+### 残っている宿題（将来やるなら）
+
+- 名前空間 `gamekit.contract.Mcp` → `Api` 等への一括リネーム（命名負債。Phase 2 参照）
+- 旧実装（`Health` / `KillCounter` / `WeaponState` と R3 依存）の整理。`PlayerController` は使用中
+- HTTP ポート (9876) の設定可能化
+- `Godot.NET.Sdk` バージョンの一元管理（Directory.Build.props 等）。現在 tps.godot / gamekit.godot の 2 箇所
+- plan.md / memo.md はリポジトリ直下にあるが、役目を終えたら docs/ への移動や整理を検討
