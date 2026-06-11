@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace tps.Logging;
+namespace gamekit.godot.Logging;
 
 public sealed class JsonlLoggerProvider : ILoggerProvider
 {

@@ -104,3 +104,49 @@ forward 登録で**同一インスタンス系列を共有**させること（�
 
 `InputSimulationTools`（名前は汎用）に ADS 操作の `SetAiming` ツールが入っている。
 Phase 5 で汎用/TPS にツールを分けるとき、SetAiming は TPS 側（CameraControlTools 等）へ移すこと。
+
+## Phase 4: gamekit.godot（Godot アダプタ）切り出し
+
+### Godot.NET.Sdk のライブラリプロジェクトは問題なく成立する
+
+plan.md でリスク扱いだったが、`Godot.NET.Sdk/4.6.2` を使った非ゲームのクラスライブラリは
+普通にビルドできた（Node 派生クラスを含まなければ Godot のソースジェネレータも無害）。
+代替案（GodotSharp NuGet 直接参照・フォルダ分離）は不要だった。
+**SDK バージョンが tps.godot と gamekit.godot の 2 つの csproj に重複している**ので、
+Godot アップデート時は両方を揃えること。
+
+### Node はゲーム側、基盤はプレーンクラス（コンポジション）
+
+Godot はシーンにアタッチするスクリプトをゲームアセンブリに要求するため、autoload の
+`InputServer`(Node) は tps.godot に残し、HTTP 機能は `GameHttpServer`（プレーンクラス）に委譲した。
+
+- フレーム待ち・タイマーは `SceneTree` を ctor 注入して `tree.ToSignal(tree, ProcessFrame)` で行う
+  （Node でなくても GodotObject 経由で await できる）
+- 駆動は InputServer の `_Process` → `Poll()`。基盤クラスは自走しない
+- スクリーンショットは `tree.Root`（ルート Window = Viewport）から取得。
+  元実装の autoload Node の `GetViewport()` と同じものを指す
+
+### ルート重複は登録時に実行時検出（Phase 2 の宿題回収）
+
+パス定数が InputEndpoints / TpsEndpoints に分かれ重複をコンパイル時に検出できないため、
+`GameHttpServer.MapGet/MapPost` が同一 (method, path) の再登録で `InvalidOperationException` を投げる。
+起動時（_Ready の登録時点）に必ず露見するので、実行時例外でも検出タイミングとしては十分早い。
+
+### /state の規約: stateProvider が null を返したら 503
+
+基盤の組み込みルートはゲーム注入の `Func<object?>` を呼ぶだけ。「未初期化なら null を返す」が
+ゲーム側との取り決め。`HttpResult.Json<T>` は宣言型が object でもランタイム型で
+シリアライズされる（System.Text.Json の仕様に依存）。
+
+### 事故記録: PowerShell 5.1 の一括置換で日本語コメントが文字化け
+
+`Get-Content`（BOM なし UTF-8 を CP932 と誤認）→ `Set-Content -Encoding utf8` の一括置換で、
+tps.godot の日本語コメントが mojibake 化した。`git checkout` で復元し、
+`[System.IO.File]::ReadAllText` / `WriteAllText`（UTF-8 既定・BOM なし）でやり直した。
+**今後 .cs の一括置換は .NET File API を使うこと。** なお Phase 1〜2 で置換したファイルは
+全て ASCII のみだったため実害なし（ただし BOM が付いた）。
+
+### 動作確認
+
+ユニットテストに加え、run_project で実機起動し ping / state / commands / set_aiming の
+疎通を確認した（HTTP プラミング移植のリグレッションは unit test で担保できないため）。

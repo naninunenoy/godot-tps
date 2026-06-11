@@ -1,8 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using Godot;
 using Microsoft.Extensions.Logging;
 
-namespace tps.Logging;
+namespace gamekit.godot.Logging;
 
 public static class AppLogger
 {

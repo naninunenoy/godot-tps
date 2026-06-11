@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using Godot;
 using Microsoft.Extensions.Logging;
 
-namespace tps.Logging;
+namespace gamekit.godot.Logging;
 
 public sealed class GodotLoggerProvider(LogLevel minLevel) : ILoggerProvider
 {

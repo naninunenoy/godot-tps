@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using tps.contract.GameCommand;
 using tps.contract.Mcp;
 using tps.csharp;
-using tps.Logging;
+using gamekit.godot.Logging;
 using VitalRouter;
 
 namespace tps;

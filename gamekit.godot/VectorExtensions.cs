@@ -1,8 +1,9 @@
 using Godot;
+using SN = System.Numerics;
 
-namespace tps;
+namespace gamekit.godot;
 
-internal static class VectorExtensions
+public static class VectorExtensions
 {
     public static SN.Vector3 ToNumerics(this Vector3 v) => new(v.X, v.Y, v.Z);
 
