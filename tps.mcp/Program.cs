@@ -4,7 +4,7 @@ using tps.client;
 using tps.mcp;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHttpClient<GameApiClient>();
+builder.Services.AddHttpClient<TpsGameApiClient>();
 builder
     .Services.AddMcpServer()
     .WithStdioServerTransport()

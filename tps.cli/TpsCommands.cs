@@ -5,7 +5,7 @@ using tps.client;
 
 public class TpsCommands
 {
-    private readonly GameApiClient _client = new(new HttpClient());
+    private readonly TpsGameApiClient _client = new(new HttpClient());
 
     /// <summary>ゲームサーバーの疎通確認</summary>
     public async Task Ping()

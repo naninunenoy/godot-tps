@@ -7,7 +7,7 @@ using tps.client;
 namespace tps.mcp;
 
 [McpServerToolType]
-public class CameraControlTools(GameApiClient client)
+public class CameraControlTools(TpsGameApiClient client)
 {
     [McpServerTool, Description("Set the player camera pitch (positive=look up, negative=look down). Range: -68.8° to 45.8°.")]
     public async Task<string> SetCameraPitch(

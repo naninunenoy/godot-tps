@@ -7,7 +7,7 @@ using tps.client;
 namespace tps.mcp;
 
 [McpServerToolType]
-public class InputSimulationTools(GameApiClient client)
+public class InputSimulationTools(TpsGameApiClient client)
 {
     [McpServerTool, Description("Ping the Godot input server to check if it is running.")]
     public async Task<string> Ping()

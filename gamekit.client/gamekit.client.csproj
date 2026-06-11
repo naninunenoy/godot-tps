@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\gamekit.client\gamekit.client.csproj" />
-    <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
+    <ProjectReference Include="..\gamekit.contract\gamekit.contract.csproj" />
   </ItemGroup>
 </Project>

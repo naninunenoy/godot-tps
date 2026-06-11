@@ -70,3 +70,37 @@ Pause / Resume / Quit はどのゲームにもある「System レベル」のコ
 SDK スタイルの ProjectReference は推移的にコンパイル参照が届くため、tps.contract 経由でも
 gamekit.contract の型は使える。ただし「どのプロジェクトが基盤の何に依存しているか」を csproj から
 読めるよう、**ソース上で直接 using しているプロジェクトには明示的に ProjectReference を張る**方針とした。
+逆に直接 using しなくなったら明示参照は外す（Phase 3 で tps.client から gamekit.contract を外した例）。
+
+## Phase 3: gamekit.client（汎用 HTTP クライアント）切り出し
+
+### 拡張はコンポジションでなく継承（TpsGameApiClient : GameApiClient）
+
+ゲーム固有 API は「同一サーバー・同一 HttpClient に対するエンドポイント追加」であり、
+基底の `Http`（BaseAddress/Timeout 設定済み）と `Serialize` を protected で公開して継承拡張とした。
+
+- 利点: 利用側（MCP ツール・CLI）はクライアント 1 個で汎用 + TPS の全 API に届く。DI も typed client 1 本
+- 欠点: protected メンバーが事実上の公開 API になる。変更時は派生クラス（各ゲーム）への影響を考慮すること
+
+### /state は GetStateAsync&lt;TState&gt;() + GetStateRawAsync() の 2 口
+
+state ペイロードはゲーム定義（plan.md 方針 3）のため、基盤クライアントは型を知らない。
+
+- `GetStateAsync<TState>()`: ゲーム側クライアントが具体型を指定して包む（`TpsGameApiClient.GetStateAsync()`）
+- `GetStateRawAsync()`: 素の JSON 文字列。型を介さない中継用で、Phase 5 の汎用 MCP ツール
+  （JSON → ToonEncoder 変換）が DTO 知識なしで動くために先行追加した
+
+なお `ReadFromJsonAsync` は Web デフォルト（大文字小文字を区別しない）なので、
+サーバー側の PascalCase JSON との互換は分割後も変わらない。
+
+### DI の前借り情報: Phase 5 で base 型への forward 登録が要る
+
+tps.mcp は現在 `AddHttpClient<TpsGameApiClient>()` で登録し、全ツールが TpsGameApiClient を受ける。
+Phase 5 で汎用ツールを gamekit.mcp に移すと、それらは基底 `GameApiClient` を要求するため、
+`services.AddTransient<GameApiClient>(sp => sp.GetRequiredService<TpsGameApiClient>())` のような
+forward 登録で**同一インスタンス系列を共有**させること（別々に typed client 登録すると HttpClient が二重になる）。
+
+### 発見: InputSimulationTools に TPS 固有の SetAiming が混在している
+
+`InputSimulationTools`（名前は汎用）に ADS 操作の `SetAiming` ツールが入っている。
+Phase 5 で汎用/TPS にツールを分けるとき、SetAiming は TPS 側（CameraControlTools 等）へ移すこと。

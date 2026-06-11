@@ -7,7 +7,7 @@ using tps.client;
 namespace tps.mcp;
 
 [McpServerToolType]
-public class GameStateTools(GameApiClient client)
+public class GameStateTools(TpsGameApiClient client)
 {
     [McpServerTool, Description("Get current game state (entities, health, weapons, frame count).")]
     public async Task<string> GetGameState()
