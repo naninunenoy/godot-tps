@@ -1,4 +1,4 @@
-namespace tps.csharp;
+﻿namespace gamekit;
 
 public sealed class Entity
 {

@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
-namespace tps.csharp;
+namespace gamekit;
 
 public sealed class InMemoryLogStore : ILogStore
 {

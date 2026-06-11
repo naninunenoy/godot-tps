@@ -1,3 +1,3 @@
-namespace tps.csharp;
+﻿namespace gamekit;
 
 public interface IComponent { }
