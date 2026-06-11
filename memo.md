@@ -150,3 +150,39 @@ tps.godot の日本語コメントが mojibake 化した。`git checkout` で復
 
 ユニットテストに加え、run_project で実機起動し ping / state / commands / set_aiming の
 疎通を確認した（HTTP プラミング移植のリグレッションは unit test で担保できないため）。
+
+## Phase 5: gamekit.mcp 切り出し + CLI 内部分割
+
+### get_game_state / state の出力から null フィールドが消えた（意図的な挙動変更）
+
+汎用化のため、MCP の `get_game_state` と CLI の `state` を「型経由の再シリアライズ」から
+「`GetStateRawAsync()` の素の JSON 中継」に変更した。従来は DTO に一度デシリアライズしてから
+再シリアライズしていたため `Health: null` のような null フィールドが復活していたが、
+サーバー側は `WhenWritingNull` で null を省略しているので、中継後は出力されない。
+
+- 利点: トークン節約（ToonEncoder の目的に合致）。基盤ツールがゲームの DTO を知らなくて済む
+- 欠点: 「コンポーネントを持っていない」ことが明示されなくなった。LLM が困るようなら
+  サーバー側の JsonOptions を変える（基盤の HttpResult.Json が一元管理している）
+
+### SetAiming ツールは CameraControlTools へ移動（Phase 3 の宿題回収）
+
+MCP ツール名はメソッド名由来（`set_aiming`）なので、クラス間移動では外部互換は壊れない。
+ツールのクラス分けは「どの口（汎用/ゲーム固有）か」で決め、名前の互換はメソッド名で守る。
+
+### DI forward 登録を実装（Phase 3 の宿題回収）
+
+`AddHttpClient<TpsGameApiClient>()` + `AddTransient<GameApiClient>(sp => sp.GetRequiredService<TpsGameApiClient>())`。
+gamekit.mcp の汎用ツールは基底型で受け、実体は TPS クライアントが流れる。
+
+### CLI は予定どおりプロジェクト分割せず 2 クラス分割
+
+ConsoleAppFramework v5 はソースジェネレータ前提で、コマンドクラスの別アセンブリ化と相性が悪い
+（plan.md 方針 5）。`GameCommands`（汎用）と `TpsCommands`（TPS）を同一 exe 内で分け、
+`app.Add<T>()` を 2 回呼んでルート名前空間にマージした。
+**2 クラス間でメソッド名（=コマンド名）が衝突しないよう注意**（衝突時は CAF が実行時に失敗する）。
+
+### 注意: 稼働中の godot-ext MCP サーバーは旧ビルドのまま
+
+MCP サーバー（dotnet run）はセッション接続時に起動されるため、このフェーズの変更は
+**次回の MCP 接続（セッション再起動）から有効**になる。今セッションでは新コードの MCP 経路を
+直接検証できないため、同一実装経路（GetStateRawAsync → ToonEncoder）を CLI の `state` で検証した。

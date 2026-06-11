@@ -42,4 +42,20 @@ public class CameraControlTools(TpsGameApiClient client)
             return $"unreachable: {ex.Message}";
         }
     }
+
+    [McpServerTool, Description("Enable or disable ADS (Aim Down Sights) state. Persists until explicitly changed.")]
+    public async Task<string> SetAiming(
+        [Description("true to enter ADS, false to exit ADS")] bool isAiming)
+    {
+        try
+        {
+            var payload = await client.SetAimingAsync(isAiming);
+            if (payload is null) return "error: empty response";
+            return payload.Success ? $"ok: {payload.Message}" : $"error: {payload.Message}";
+        }
+        catch (Exception ex)
+        {
+            return $"unreachable: {ex.Message}";
+        }
+    }
 }

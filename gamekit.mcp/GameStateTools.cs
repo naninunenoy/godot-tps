@@ -1,22 +1,23 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Cysharp.AI;
+using gamekit.client;
 using ModelContextProtocol.Server;
-using tps.client;
 
-namespace tps.mcp;
+namespace gamekit.mcp;
 
 [McpServerToolType]
-public class GameStateTools(TpsGameApiClient client)
+public class GameStateTools(GameApiClient client)
 {
-    [McpServerTool, Description("Get current game state (entities, health, weapons, frame count).")]
+    [McpServerTool, Description("Get current game state (entities and their components, frame count).")]
     public async Task<string> GetGameState()
     {
         try
         {
-            var payload = await client.GetStateAsync();
-            var element = JsonSerializer.SerializeToElement(payload);
-            return ToonEncoder.Encode(element);
+            // ペイロード型はゲーム定義のため、素の JSON を中継して ToonEncoder へ渡す
+            var json = await client.GetStateRawAsync();
+            using var doc = JsonDocument.Parse(json);
+            return ToonEncoder.Encode(doc.RootElement);
         }
         catch (Exception ex)
         {

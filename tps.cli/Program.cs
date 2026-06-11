@@ -2,6 +2,7 @@ using ConsoleAppFramework;
 
 var app = ConsoleApp.Create();
 app.UseFilter<ErrorFilter>();
+app.Add<GameCommands>();
 app.Add<TpsCommands>();
 app.Run(args);
 

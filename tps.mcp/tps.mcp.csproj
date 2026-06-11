@@ -14,7 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
+    <ProjectReference Include="..\gamekit.client\gamekit.client.csproj" />
+    <ProjectReference Include="..\gamekit.mcp\gamekit.mcp.csproj" />
     <ProjectReference Include="..\tps.client\tps.client.csproj" />
   </ItemGroup>
 </Project>
