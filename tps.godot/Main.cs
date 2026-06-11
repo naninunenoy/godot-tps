@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Microsoft.Extensions.Logging;
-using tps.contract.GameCommand;
+using gamekit.contract.GameCommand;
 using tps.csharp;
 using tps.Logging;
 using VitalRouter;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using gamekit.contract.Mcp;
 using Godot;
 using tps;
 using tps.contract.Mcp;
@@ -93,7 +94,7 @@ public partial class InputServer : Node
                         )
                     );
             }
-            else if (method == "POST" && path == InputEndpoints.CameraPitch)
+            else if (method == "POST" && path == TpsEndpoints.CameraPitch)
             {
                 if (_player is null)
                     SendTextResponse(peer, 503, "not initialized");
@@ -109,7 +110,7 @@ public partial class InputServer : Node
                     }
                 }
             }
-            else if (method == "POST" && path == InputEndpoints.LookAt)
+            else if (method == "POST" && path == TpsEndpoints.LookAt)
             {
                 if (_player is null)
                     SendTextResponse(peer, 503, "not initialized");
@@ -125,7 +126,7 @@ public partial class InputServer : Node
                     }
                 }
             }
-            else if (method == "POST" && path == InputEndpoints.SetAiming)
+            else if (method == "POST" && path == TpsEndpoints.SetAiming)
             {
                 if (_player is null)
                     SendTextResponse(peer, 503, "not initialized");

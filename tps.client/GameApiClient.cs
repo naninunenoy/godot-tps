@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using gamekit.contract.Mcp;
 using tps.contract.Mcp;
 
 namespace tps.client;
@@ -48,7 +49,7 @@ public class GameApiClient
     public async Task<CameraControlResponse?> SetAimingAsync(bool isAiming)
     {
         var content = Serialize(new SetAimingRequest(isAiming));
-        var response = await _http.PostAsync(InputEndpoints.SetAiming, content);
+        var response = await _http.PostAsync(TpsEndpoints.SetAiming, content);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
     }
@@ -70,7 +71,7 @@ public class GameApiClient
     public async Task<CameraControlResponse?> SetCameraPitchAsync(float pitchDegrees)
     {
         var content = Serialize(new SetCameraPitchRequest(pitchDegrees));
-        var response = await _http.PostAsync(InputEndpoints.CameraPitch, content);
+        var response = await _http.PostAsync(TpsEndpoints.CameraPitch, content);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
     }
@@ -78,7 +79,7 @@ public class GameApiClient
     public async Task<CameraControlResponse?> LookAtPositionAsync(float x, float y, float z)
     {
         var content = Serialize(new LookAtPositionRequest(x, y, z));
-        var response = await _http.PostAsync(InputEndpoints.LookAt, content);
+        var response = await _http.PostAsync(TpsEndpoints.LookAt, content);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
     }

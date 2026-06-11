@@ -1,6 +1,6 @@
 using Godot;
 using Microsoft.Extensions.Logging;
-using tps.contract.GameCommand;
+using gamekit.contract.GameCommand;
 using tps.Logging;
 using VitalRouter;
 

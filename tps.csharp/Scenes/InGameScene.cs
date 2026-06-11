@@ -1,4 +1,4 @@
-using tps.contract.GameCommand;
+using gamekit.contract.GameCommand;
 using tps.contract.Mcp;
 
 namespace tps.csharp;

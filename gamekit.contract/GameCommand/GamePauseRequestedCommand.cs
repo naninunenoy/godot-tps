@@ -1,5 +1,5 @@
-using VitalRouter;
+﻿using VitalRouter;
 
-namespace tps.contract.GameCommand;
+namespace gamekit.contract.GameCommand;
 
 public partial struct GamePauseRequestedCommand : ICommand { }

@@ -1,3 +1,3 @@
-namespace tps.contract.Mcp;
+﻿namespace gamekit.contract.Mcp;
 
 public record PressActionRequest(string Action, int DurationMs);

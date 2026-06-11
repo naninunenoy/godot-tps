@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\gamekit.contract\gamekit.contract.csproj" />
-    <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
+    <PackageReference Include="VitalRouter" Version="2.0.5" />
   </ItemGroup>
 </Project>

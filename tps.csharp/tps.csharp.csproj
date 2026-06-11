@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\gamekit\gamekit.csproj" />
+    <ProjectReference Include="..\gamekit.contract\gamekit.contract.csproj" />
     <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
   </ItemGroup>
 
