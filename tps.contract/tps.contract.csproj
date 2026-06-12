@@ -8,4 +8,8 @@
   <ItemGroup>
     <PackageReference Include="VitalRouter" Version="2.0.5" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\gamekit.contract\gamekit.contract.csproj" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Godot.NET.Sdk/4.6.2">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\gamekit\gamekit.csproj" />
+    <ProjectReference Include="..\gamekit.contract\gamekit.contract.csproj" />
+  </ItemGroup>
+</Project>

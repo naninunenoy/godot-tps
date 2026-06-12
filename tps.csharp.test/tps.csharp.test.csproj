@@ -17,11 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\gamekit\gamekit.csproj" />
     <ProjectReference Include="..\tps.contract\tps.contract.csproj" />
     <ProjectReference Include="..\tps.csharp\tps.csharp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="gamekit" />
   </ItemGroup>
 </Project>

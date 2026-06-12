@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using gamekit.contract.Mcp;
+using gamekit.godot;
 using Godot;
 using tps;
 using tps.contract.Mcp;
@@ -11,7 +10,7 @@ using tps.csharp;
 
 public partial class InputServer : Node
 {
-    private readonly TcpServer _tcpServer = new();
+    private GameHttpServer? _server;
     private ISceneQuery? _sceneQuery;
     private IScene? _scene;
     private Player? _player;
@@ -28,295 +27,62 @@ public partial class InputServer : Node
         if (!OS.IsDebugBuild())
             return;
 
-        var err = _tcpServer.Listen(InputEndpoints.Port);
+        var server = new GameHttpServer(GetTree());
+        GameApiRoutes.Register(
+            server,
+            GetTree(),
+            () => _scene,
+            () => _sceneQuery is null ? null : BuildStateResponse()
+        );
+        server.MapPost(TpsEndpoints.CameraPitch, body => Task.FromResult(HandleCameraPitch(body)));
+        server.MapPost(TpsEndpoints.LookAt, body => Task.FromResult(HandleLookAt(body)));
+        server.MapPost(TpsEndpoints.SetAiming, body => Task.FromResult(HandleSetAiming(body)));
+
+        var err = server.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
+        {
             GD.PrintErr($"[InputServer] Failed to listen on port {InputEndpoints.Port}: {err}");
-        else
-            GD.Print($"[InputServer] Listening on port {InputEndpoints.Port}");
-    }
-
-    public override void _ExitTree()
-    {
-        _tcpServer.Stop();
-    }
-
-    public override void _Process(double delta)
-    {
-        if (_tcpServer.IsConnectionAvailable())
-            HandleConnectionAsync(_tcpServer.TakeConnection());
-    }
-
-    private async void HandleConnectionAsync(StreamPeerTcp peer)
-    {
-        var responseSent = false;
-        try
-        {
-            var (method, path, body) = await ReadRequestAsync(peer);
-            GD.PrintRich($"[InputServer] {method} {path}");
-
-            if (method == "GET" && path == InputEndpoints.Ping)
-            {
-                SendJsonResponse(peer, 200, new PingResponse("pong"));
-            }
-            else if (method == "GET" && path == InputEndpoints.Actions)
-            {
-                var actions = InputMap.GetActions().Select(a => a.ToString()).ToArray();
-                SendJsonResponse(peer, 200, new GetActionsResponse(actions));
-            }
-            else if (method == "POST" && path == InputEndpoints.PressAction)
-            {
-                var response = HandlePressActionAsync(body);
-                SendJsonResponse(peer, 200, response);
-            }
-            else if (method == "GET" && path == InputEndpoints.Screenshot)
-            {
-                var imageBytes = await HandleScreenshotAsync();
-                SendBinaryResponse(peer, 200, imageBytes, "image/png");
-            }
-            else if (method == "GET" && path == InputEndpoints.State)
-            {
-                if (_sceneQuery is null)
-                    SendTextResponse(peer, 503, "not initialized");
-                else
-                    SendJsonResponse(peer, 200, BuildStateResponse());
-            }
-            else if (method == "GET" && path == InputEndpoints.Commands)
-            {
-                if (_scene is null)
-                    SendTextResponse(peer, 503, "not initialized");
-                else
-                    SendJsonResponse(
-                        peer,
-                        200,
-                        new CommandListResponse(
-                            _scene.AvailableCommands.Select(c => c.Name).ToArray()
-                        )
-                    );
-            }
-            else if (method == "POST" && path == InputEndpoints.CameraPitch)
-            {
-                if (_player is null)
-                    SendTextResponse(peer, 503, "not initialized");
-                else
-                {
-                    var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
-                    if (cmd is null)
-                        SendTextResponse(peer, 400, "invalid request");
-                    else
-                    {
-                        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
-                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
-                    }
-                }
-            }
-            else if (method == "POST" && path == InputEndpoints.LookAt)
-            {
-                if (_player is null)
-                    SendTextResponse(peer, 503, "not initialized");
-                else
-                {
-                    var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
-                    if (cmd is null)
-                        SendTextResponse(peer, 400, "invalid request");
-                    else
-                    {
-                        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
-                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
-                    }
-                }
-            }
-            else if (method == "POST" && path == InputEndpoints.SetAiming)
-            {
-                if (_player is null)
-                    SendTextResponse(peer, 503, "not initialized");
-                else
-                {
-                    var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
-                    if (cmd is null)
-                        SendTextResponse(peer, 400, "invalid request");
-                    else
-                    {
-                        _player.SetAiming(cmd.IsAiming);
-                        SendJsonResponse(peer, 200, new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
-                    }
-                }
-            }
-            else
-            {
-                SendTextResponse(peer, 404, $"not found: {path}");
-            }
-            responseSent = true;
+            return;
         }
-        catch (Exception ex)
-        {
-            GD.PrintErr($"[InputServer] {ex.Message}");
-            if (!responseSent)
-            {
-                try { SendTextResponse(peer, 500, ex.Message); }
-                catch { /* peer may already be closed */ }
-            }
-        }
-        finally
-        {
-            peer.DisconnectFromHost();
-        }
+        GD.Print($"[InputServer] Listening on port {InputEndpoints.Port}");
+        _server = server;
     }
 
-    private async Task<(string method, string path, string body)> ReadRequestAsync(
-        StreamPeerTcp peer
-    )
+    public override void _ExitTree() => _server?.Stop();
+
+    public override void _Process(double delta) => _server?.Poll();
+
+    private HttpResult HandleCameraPitch(string body)
     {
-        var rawBytes = new List<byte>();
-        var headerEnd = -1;
-
-        while (headerEnd < 0)
-        {
-            peer.Poll();
-
-            var status = peer.GetStatus();
-            if (status is StreamPeerTcp.Status.None or StreamPeerTcp.Status.Error)
-                throw new System.IO.IOException($"Connection dropped (status={status})");
-
-            var available = peer.GetAvailableBytes();
-            if (available > 0)
-            {
-                var result = peer.GetData(available);
-                if (result[0].As<Error>() == Error.Ok)
-                    rawBytes.AddRange(result[1].AsByteArray());
-
-                for (var i = 0; i <= rawBytes.Count - 4; i++)
-                {
-                    if (
-                        rawBytes[i] == '\r'
-                        && rawBytes[i + 1] == '\n'
-                        && rawBytes[i + 2] == '\r'
-                        && rawBytes[i + 3] == '\n'
-                    )
-                    {
-                        headerEnd = i;
-                        break;
-                    }
-                }
-            }
-
-            if (headerEnd < 0)
-                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-        }
-
-        var headerStr = Encoding.UTF8.GetString(rawBytes.Take(headerEnd).ToArray());
-        var lines = headerStr.Split("\r\n");
-        var requestParts = lines[0].Split(' ');
-        var method = requestParts[0];
-        var path = requestParts[1];
-
-        var contentLength = 0;
-        foreach (var line in lines.Skip(1))
-        {
-            if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                contentLength = int.Parse(line.Split(':')[1].Trim());
-        }
-
-        var bodyBytes = rawBytes.Skip(headerEnd + 4).ToList();
-        while (bodyBytes.Count < contentLength)
-        {
-            peer.Poll();
-            var available = peer.GetAvailableBytes();
-            if (available > 0)
-            {
-                var result = peer.GetData(available);
-                if (result[0].As<Error>() == Error.Ok)
-                    bodyBytes.AddRange(result[1].AsByteArray());
-            }
-            else
-            {
-                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            }
-        }
-
-        return (method, path, Encoding.UTF8.GetString(bodyBytes.Take(contentLength).ToArray()));
+        if (_player is null)
+            return HttpResult.Text("not initialized", 503);
+        var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
+        if (cmd is null)
+            return HttpResult.Text("invalid request", 400);
+        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
+        return HttpResult.Json(new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
     }
 
-    private PressActionResponse HandlePressActionAsync(string body)
+    private HttpResult HandleLookAt(string body)
     {
-        var request = JsonSerializer.Deserialize<PressActionRequest>(body);
-        if (request is null || string.IsNullOrEmpty(request.Action))
-            return new PressActionResponse(false, "invalid request");
-
-        if (!InputMap.HasAction(request.Action))
-            return new PressActionResponse(false, $"unknown action: {request.Action}");
-
-        GD.Print($"[InputServer] ActionPress: {request.Action} ({request.DurationMs}ms)");
-        Input.ActionPress(request.Action);
-        ReleaseActionAfterDelay(request.Action, request.DurationMs);
-
-        return new PressActionResponse(
-            true,
-            $"pressed {request.Action} for {request.DurationMs}ms"
-        );
+        if (_player is null)
+            return HttpResult.Text("not initialized", 503);
+        var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
+        if (cmd is null)
+            return HttpResult.Text("invalid request", 400);
+        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
+        return HttpResult.Json(new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
     }
 
-    private async void ReleaseActionAfterDelay(string action, int durationMs)
+    private HttpResult HandleSetAiming(string body)
     {
-        await ToSignal(
-            GetTree().CreateTimer(durationMs / 1000.0),
-            SceneTreeTimer.SignalName.Timeout
-        );
-        Input.ActionRelease(action);
-    }
-
-    private async Task<byte[]> HandleScreenshotAsync()
-    {
-        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-        var image = GetViewport().GetTexture().GetImage();
-        var pngBytes = image.SavePngToBuffer();
-        GD.Print($"[InputServer] Screenshot captured ({pngBytes.Length} bytes)");
-        return pngBytes;
-    }
-
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-    };
-
-    private static void SendJsonResponse<T>(StreamPeerTcp peer, int status, T payload)
-    {
-        var json = JsonSerializer.Serialize(payload, _jsonOptions);
-        var bodyBytes = Encoding.UTF8.GetBytes(json);
-        WriteResponse(peer, status, bodyBytes, "application/json; charset=utf-8");
-    }
-
-    private static void SendTextResponse(StreamPeerTcp peer, int status, string body)
-    {
-        var bodyBytes = Encoding.UTF8.GetBytes(body);
-        WriteResponse(peer, status, bodyBytes, "text/plain; charset=utf-8");
-    }
-
-    private static void SendBinaryResponse(
-        StreamPeerTcp peer,
-        int status,
-        byte[] bodyBytes,
-        string contentType
-    )
-    {
-        WriteResponse(peer, status, bodyBytes, contentType);
-    }
-
-    private static void WriteResponse(
-        StreamPeerTcp peer,
-        int status,
-        byte[] bodyBytes,
-        string contentType
-    )
-    {
-        var statusText = status switch
-        {
-            200 => "OK",
-            404 => "Not Found",
-            _ => "Error",
-        };
-        var header =
-            $"HTTP/1.1 {status} {statusText}\r\nContent-Type: {contentType}\r\nContent-Length: {bodyBytes.Length}\r\nConnection: close\r\n\r\n";
-        peer.PutData(Encoding.UTF8.GetBytes(header).Concat(bodyBytes).ToArray());
+        if (_player is null)
+            return HttpResult.Text("not initialized", 503);
+        var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
+        if (cmd is null)
+            return HttpResult.Text("invalid request", 400);
+        _player.SetAiming(cmd.IsAiming);
+        return HttpResult.Json(new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
     }
 
     private GameStateResponse BuildStateResponse()
