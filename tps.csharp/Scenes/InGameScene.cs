@@ -10,5 +10,6 @@ public sealed class InGameScene : IScene
             CommandDescriptor.Of<GamePauseRequestedCommand>(),
             CommandDescriptor.Of<SetCameraPitchRequest>(),
             CommandDescriptor.Of<LookAtPositionRequest>(),
+            CommandDescriptor.Of<SetAimingRequest>(),
         ];
 }

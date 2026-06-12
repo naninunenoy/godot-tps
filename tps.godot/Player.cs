@@ -197,7 +197,11 @@ public partial class Player : CharacterBody3D
     public void On(LookAtPositionRequest cmd) =>
         FaceToward(cmd.X, cmd.Y, cmd.Z);
 
-    public void SetCameraPitch(float pitchRadians)
+    [Route]
+    public void On(SetAimingRequest cmd) =>
+        SetAiming(cmd.IsAiming);
+
+    private void SetCameraPitch(float pitchRadians)
     {
         var pitch = Mathf.Clamp(pitchRadians, _controller.Settings.CameraPitchMin, _controller.Settings.CameraPitchMax);
         var rot = _springArm.Rotation;
@@ -206,7 +210,7 @@ public partial class Player : CharacterBody3D
         _controller.SetPitch(pitch);
     }
 
-    public void SetAiming(bool isAiming)
+    private void SetAiming(bool isAiming)
     {
         if (isAiming)
             Input.ActionPress("aim");
@@ -214,7 +218,7 @@ public partial class Player : CharacterBody3D
             Input.ActionRelease("aim");
     }
 
-    public void FaceToward(float worldX, float worldY, float worldZ)
+    private void FaceToward(float worldX, float worldY, float worldZ)
     {
         var target = new Vector3(worldX, worldY, worldZ);
         var pivotPos = _cameraPivot.GlobalPosition;

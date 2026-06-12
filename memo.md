@@ -201,3 +201,52 @@ Node はゲーム側・基盤はプレーンクラス / state はゲーム定義
 - HTTP ポート (9876) の設定可能化
 - `Godot.NET.Sdk` バージョンの一元管理（Directory.Build.props 等）。現在 tps.godot / gamekit.godot の 2 箇所
 - plan.md / memo.md はリポジトリ直下にあるが、役目を終えたら docs/ への移動や整理を検討
+
+## コードレビュー対応（2026-06-12）
+
+main との差分レビュー（11 件）への対応で下した判断。
+
+### 旧 InputServer 由来の欠陥は「基盤昇格」を機に修正した
+
+ボディ読み取りループの切断検出漏れ（無限フレームループ）・async void の例外逸出・
+不正リクエストへの 500 応答は、いずれも旧 InputServer から移植した既存欠陥。
+「ゲーム 1 個のデバッグ機能」なら許容できたが、gamekit.godot は基盤なので要求水準を上げて修正した。
+**コード移動 PR でも、移動先が基盤なら品質基準は基盤側で再評価すること。**
+
+### JSON の方針: レスポンスは PascalCase 固定、リクエスト解釈は大文字小文字非依存
+
+レスポンス側を Web 既定（camelCase）にすると既存クライアント・ToonEncoder 出力の見た目が
+変わるため、PascalCase（`HttpResult.Json` が管理）を維持。リクエスト側のみ
+`PropertyNameCaseInsensitive = true`（`GameHttpServer.MapPostJson` が一元管理）とし、
+クライアント実装の命名差に寛容にした。
+
+### HTTP ログのレベル方針
+
+クライアント起因（不正リクエスト 400・切断）は **Warning**、ハンドラ内の例外（サーバーのバグ）は
+**Error**。テスト規約の「エラーレベル以上のログが出ていないことをアサートする」を、
+外部からの雑な入力で壊さないための区別。
+
+### カメラ操作をコマンドバス経由に変更（レビュー #5 の対応）
+
+レビューで「ADR-0012 はコマンド = ICommand と規定するが、AvailableCommands が
+ICommand でないリクエスト DTO を公開している」矛盾が見つかった。調査の結果、
+**Player には SetCameraPitchRequest / LookAtPositionRequest の [Route] ハンドラが既に存在するのに
+誰も publish しておらず（InputServer が Player を直接呼んでいた）デッドコードだった**。
+元々コマンドバスを通す設計意図があったとみられるため、ドキュメントを弱めるのではなく
+コードを設計に合わせた:
+
+- リクエスト 3 型（SetCameraPitch / LookAtPosition / SetAiming）に `VitalRouter.ICommand` を実装
+  （HTTP リクエスト DTO 兼コマンド。型を二重定義するより薄い）
+- InputServer は Player 参照を捨て、Router へ publish するだけに（CQRS 規約
+  「外部からの書き込みはコマンド経由」がカメラ操作でも真になった）
+- Player のカメラ操作メソッドは private 化し、コマンドバスが唯一の入口であることを強制
+- AvailableCommands に漏れていた SetAimingRequest を追加（/commands が 3 → 4 件に）
+
+なお `_ = router.PublishAsync(cmd)` は fire-and-forget だが、VitalRouter の同期ルートは
+publish 時点でインライン実行されるため、HTTP レスポンス返却前に状態反映される（順序保証あり）。
+
+### 対応を見送った指摘
+
+なし（11 件すべて対応）。ただし「/commands に GamePauseRequestedCommand があるのに
+HTTP からコマンドを投入する汎用の口が無い」という潜在ギャップを対応中に発見した。
+汎用コマンド投入エンドポイント（POST /command 等）は将来の課題として残す。

@@ -3,9 +3,9 @@ using gamekit.godot;
 using gamekit.godot.Logging;
 using Godot;
 using Microsoft.Extensions.Logging;
-using tps;
 using tps.contract.Mcp;
 using tps.csharp;
+using VitalRouter;
 
 public partial class InputServer : Node
 {
@@ -13,13 +13,13 @@ public partial class InputServer : Node
     private GameHttpServer? _server;
     private ISceneQuery? _sceneQuery;
     private IScene? _scene;
-    private Player? _player;
+    private Router? _router;
 
-    public void Initialize(ISceneQuery sceneQuery, IScene scene, Player player)
+    public void Initialize(ISceneQuery sceneQuery, IScene scene, Router router)
     {
         _sceneQuery = sceneQuery;
         _scene = scene;
-        _player = player;
+        _router = router;
     }
 
     public override void _Ready()
@@ -29,9 +29,19 @@ public partial class InputServer : Node
 
         var server = new GameHttpServer(GetTree());
         GameApiRoutes.Register(server, () => _scene, () => _sceneQuery, GameStateResponseBuilder.Build);
-        server.MapPostJson<SetCameraPitchRequest>(TpsEndpoints.CameraPitch, HandleCameraPitch);
-        server.MapPostJson<LookAtPositionRequest>(TpsEndpoints.LookAt, HandleLookAt);
-        server.MapPostJson<SetAimingRequest>(TpsEndpoints.SetAiming, HandleSetAiming);
+        // TPS 固有ルート。CQRS 規約（外部からの書き込みはコマンド経由）に従い、Router へ publish するだけ
+        server.MapPostJson<SetCameraPitchRequest>(
+            TpsEndpoints.CameraPitch,
+            cmd => Publish(cmd, $"pitch={cmd.PitchDegrees}°")
+        );
+        server.MapPostJson<LookAtPositionRequest>(
+            TpsEndpoints.LookAt,
+            cmd => Publish(cmd, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})")
+        );
+        server.MapPostJson<SetAimingRequest>(
+            TpsEndpoints.SetAiming,
+            cmd => Publish(cmd, $"aiming={cmd.IsAiming}")
+        );
 
         var err = server.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
@@ -47,27 +57,12 @@ public partial class InputServer : Node
 
     public override void _Process(double delta) => _server?.Poll();
 
-    private HttpResult HandleCameraPitch(SetCameraPitchRequest cmd)
+    private HttpResult Publish<TCommand>(TCommand command, string message)
+        where TCommand : ICommand
     {
-        if (_player is null)
+        if (_router is null)
             return HttpResult.Text("not initialized", 503);
-        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
-        return HttpResult.Json(new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
-    }
-
-    private HttpResult HandleLookAt(LookAtPositionRequest cmd)
-    {
-        if (_player is null)
-            return HttpResult.Text("not initialized", 503);
-        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
-        return HttpResult.Json(new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
-    }
-
-    private HttpResult HandleSetAiming(SetAimingRequest cmd)
-    {
-        if (_player is null)
-            return HttpResult.Text("not initialized", 503);
-        _player.SetAiming(cmd.IsAiming);
-        return HttpResult.Json(new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
+        _ = _router.PublishAsync(command);
+        return HttpResult.Json(new CameraControlResponse(true, message));
     }
 }
