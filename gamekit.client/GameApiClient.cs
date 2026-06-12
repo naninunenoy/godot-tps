@@ -37,13 +37,11 @@ public class GameApiClient
         return await response.Content.ReadAsByteArrayAsync();
     }
 
-    public async Task<PressActionResponse?> PressActionAsync(string action, int durationMs)
-    {
-        var content = Serialize(new PressActionRequest(action, durationMs));
-        var response = await Http.PostAsync(InputEndpoints.PressAction, content);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<PressActionResponse>();
-    }
+    public Task<PressActionResponse?> PressActionAsync(string action, int durationMs) =>
+        PostJsonAsync<PressActionRequest, PressActionResponse>(
+            InputEndpoints.PressAction,
+            new PressActionRequest(action, durationMs)
+        );
 
     public async Task<CommandListResponse?> GetAvailableCommandsAsync()
     {
@@ -68,6 +66,16 @@ public class GameApiClient
         return await response.Content.ReadAsStringAsync();
     }
 
-    protected static StringContent Serialize<T>(T value) =>
-        new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
+    /// <summary>JSON リクエストを POST して JSON レスポンスを受け取る共通形。派生クラスのゲーム固有 API もこれを使う。</summary>
+    protected async Task<TResp?> PostJsonAsync<TReq, TResp>(string path, TReq request)
+    {
+        var content = new StringContent(
+            JsonSerializer.Serialize(request),
+            Encoding.UTF8,
+            "application/json"
+        );
+        var response = await Http.PostAsync(path, content);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TResp>();
+    }
 }

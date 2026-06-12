@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using gamekit.client;
 using tps.contract.Mcp;
 
@@ -8,27 +7,21 @@ public class TpsGameApiClient(HttpClient http) : GameApiClient(http)
 {
     public Task<GameStateResponse?> GetStateAsync() => GetStateAsync<GameStateResponse>();
 
-    public async Task<CameraControlResponse?> SetAimingAsync(bool isAiming)
-    {
-        var content = Serialize(new SetAimingRequest(isAiming));
-        var response = await Http.PostAsync(TpsEndpoints.SetAiming, content);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
-    }
+    public Task<CameraControlResponse?> SetAimingAsync(bool isAiming) =>
+        PostJsonAsync<SetAimingRequest, CameraControlResponse>(
+            TpsEndpoints.SetAiming,
+            new SetAimingRequest(isAiming)
+        );
 
-    public async Task<CameraControlResponse?> SetCameraPitchAsync(float pitchDegrees)
-    {
-        var content = Serialize(new SetCameraPitchRequest(pitchDegrees));
-        var response = await Http.PostAsync(TpsEndpoints.CameraPitch, content);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
-    }
+    public Task<CameraControlResponse?> SetCameraPitchAsync(float pitchDegrees) =>
+        PostJsonAsync<SetCameraPitchRequest, CameraControlResponse>(
+            TpsEndpoints.CameraPitch,
+            new SetCameraPitchRequest(pitchDegrees)
+        );
 
-    public async Task<CameraControlResponse?> LookAtPositionAsync(float x, float y, float z)
-    {
-        var content = Serialize(new LookAtPositionRequest(x, y, z));
-        var response = await Http.PostAsync(TpsEndpoints.LookAt, content);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CameraControlResponse>();
-    }
+    public Task<CameraControlResponse?> LookAtPositionAsync(float x, float y, float z) =>
+        PostJsonAsync<LookAtPositionRequest, CameraControlResponse>(
+            TpsEndpoints.LookAt,
+            new LookAtPositionRequest(x, y, z)
+        );
 }
