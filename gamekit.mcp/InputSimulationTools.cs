@@ -10,32 +10,18 @@ namespace gamekit.mcp;
 public class InputSimulationTools(GameApiClient client)
 {
     [McpServerTool, Description("Ping the game's input server to check if it is running.")]
-    public async Task<string> Ping()
-    {
-        try
-        {
-            var payload = await client.PingAsync();
-            return payload?.Message ?? "error: empty response";
-        }
-        catch (Exception ex)
-        {
-            return $"unreachable: {ex.Message}";
-        }
-    }
+    public Task<string> Ping() =>
+        McpToolRunner.RunAsync(async () =>
+            (await client.PingAsync())?.Message ?? "error: empty response"
+        );
 
     [McpServerTool, Description("List all InputMap action names available in the running game.")]
-    public async Task<string> GetActions()
-    {
-        try
+    public Task<string> GetActions() =>
+        McpToolRunner.RunAsync(async () =>
         {
             var payload = await client.GetActionsAsync();
             return JsonSerializer.Serialize(payload?.Actions ?? Array.Empty<string>());
-        }
-        catch (Exception ex)
-        {
-            return $"unreachable: {ex.Message}";
-        }
-    }
+        });
 
     [McpServerTool, Description("Capture a screenshot of the running game and return it as an image.")]
     public async Task<DataContent> TakeScreenshot()
@@ -45,19 +31,13 @@ public class InputSimulationTools(GameApiClient client)
     }
 
     [McpServerTool, Description("Simulate pressing a key action defined in the game's InputMap.")]
-    public async Task<string> PressAction(
+    public Task<string> PressAction(
         [Description("The InputMap action name (e.g. 'ui_accept', 'move_forward')")] string action,
-        [Description("Duration to hold the action in milliseconds (default 100)")] int durationMs = 100)
-    {
-        try
+        [Description("Duration to hold the action in milliseconds (default 100)")] int durationMs = 100) =>
+        McpToolRunner.RunAsync(async () =>
         {
             var payload = await client.PressActionAsync(action, durationMs);
             if (payload is null) return "error: empty response";
             return payload.Success ? $"ok: {payload.Message}" : $"error: {payload.Message}";
-        }
-        catch (Exception ex)
-        {
-            return $"unreachable: {ex.Message}";
-        }
-    }
+        });
 }
