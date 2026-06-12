@@ -1,12 +1,15 @@
 using gamekit.contract.Mcp;
 using gamekit.godot;
+using gamekit.godot.Logging;
 using Godot;
+using Microsoft.Extensions.Logging;
 using tps;
 using tps.contract.Mcp;
 using tps.csharp;
 
 public partial class InputServer : Node
 {
+    private readonly ILogger<InputServer> _logger = AppLogger.For<InputServer>();
     private GameHttpServer? _server;
     private ISceneQuery? _sceneQuery;
     private IScene? _scene;
@@ -33,10 +36,10 @@ public partial class InputServer : Node
         var err = server.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
         {
-            GD.PrintErr($"[InputServer] Failed to listen on port {InputEndpoints.Port}: {err}");
+            _logger.LogError("Failed to listen on port {Port}: {Error}", InputEndpoints.Port, err);
             return;
         }
-        GD.Print($"[InputServer] Listening on port {InputEndpoints.Port}");
+        _logger.LogInformation("Listening on port {Port}", InputEndpoints.Port);
         _server = server;
     }
 

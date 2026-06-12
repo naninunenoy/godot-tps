@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using gamekit.contract.Mcp;
+using gamekit.godot.Logging;
 using Godot;
+using Microsoft.Extensions.Logging;
 
 namespace gamekit.godot;
 
@@ -12,6 +14,8 @@ namespace gamekit.godot;
 /// </summary>
 public static class GameApiRoutes
 {
+    private static readonly ILogger Logger = AppLogger.For("gamekit.godot.GameApiRoutes");
+
     public static void Register(
         GameHttpServer server,
         Func<IScene?> sceneProvider,
@@ -44,7 +48,7 @@ public static class GameApiRoutes
                 await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
                 var image = tree.Root.GetTexture().GetImage();
                 var pngBytes = image.SavePngToBuffer();
-                GD.Print($"[GameApiRoutes] Screenshot captured ({pngBytes.Length} bytes)");
+                Logger.LogDebug("Screenshot captured ({Bytes} bytes)", pngBytes.Length);
                 return HttpResult.Binary(pngBytes, "image/png");
             }
         );
@@ -81,7 +85,7 @@ public static class GameApiRoutes
         if (!InputMap.HasAction(request.Action))
             return HttpResult.Json(new PressActionResponse(false, $"unknown action: {request.Action}"));
 
-        GD.Print($"[GameApiRoutes] ActionPress: {request.Action} ({request.DurationMs}ms)");
+        Logger.LogDebug("ActionPress: {Action} ({DurationMs}ms)", request.Action, request.DurationMs);
         Input.ActionPress(request.Action);
         ReleaseActionAfterDelay(tree, request.Action, request.DurationMs);
 
@@ -103,7 +107,7 @@ public static class GameApiRoutes
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameApiRoutes] ActionRelease failed: {ex.Message}");
+            Logger.LogError(ex, "ActionRelease failed: {Action}", action);
         }
     }
 }

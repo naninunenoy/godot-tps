@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using gamekit.godot.Logging;
 using Godot;
+using Microsoft.Extensions.Logging;
 
 namespace gamekit.godot;
 
@@ -13,10 +15,12 @@ namespace gamekit.godot;
 /// Node ではないプレーンクラスなので、ゲーム側の Node（autoload 等）が
 /// 生成して _Process から Poll() を呼ぶ。フレーム待ちは SceneTree 経由で行う。
 /// </summary>
-public sealed class GameHttpServer(SceneTree tree)
+public sealed class GameHttpServer(SceneTree tree, ILogger? logger = null)
 {
     /// <summary>フレーム待ち・タイマー・ルートハンドラがシーンへアクセスするための SceneTree。</summary>
     public SceneTree Tree { get; } = tree;
+
+    private readonly ILogger _logger = logger ?? AppLogger.For<GameHttpServer>();
 
     // リクエスト解釈は大文字小文字を区別しない（クライアント実装のプロパティ命名差を許容する）。
     // レスポンス側の方針（PascalCase・null 省略）は HttpResult.Json が持つ
@@ -88,7 +92,7 @@ public sealed class GameHttpServer(SceneTree tree)
         try
         {
             var (method, path, body) = await ReadRequestAsync(peer);
-            GD.PrintRich($"[GameHttpServer] {method} {path}");
+            _logger.LogDebug("{Method} {Path}", method, path);
 
             var result = _routes.TryGetValue((method, path), out var handler)
                 ? await handler(body)
@@ -99,7 +103,11 @@ public sealed class GameHttpServer(SceneTree tree)
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameHttpServer] {ex.Message}");
+            // クライアント起因（不正リクエスト・切断）は Warning、それ以外（ハンドラのバグ等）は Error
+            if (ex is HttpBadRequestException or System.IO.IOException)
+                _logger.LogWarning("Request failed: {Message}", ex.Message);
+            else
+                _logger.LogError(ex, "Request handling failed");
             if (!responseSent)
             {
                 var status = ex is HttpBadRequestException ? 400 : 500;
