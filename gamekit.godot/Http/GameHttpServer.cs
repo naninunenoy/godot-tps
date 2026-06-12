@@ -15,6 +15,9 @@ namespace gamekit.godot;
 /// </summary>
 public sealed class GameHttpServer(SceneTree tree)
 {
+    /// <summary>フレーム待ち・タイマー・ルートハンドラがシーンへアクセスするための SceneTree。</summary>
+    public SceneTree Tree { get; } = tree;
+
     // リクエスト解釈は大文字小文字を区別しない（クライアント実装のプロパティ命名差を許容する）。
     // レスポンス側の方針（PascalCase・null 省略）は HttpResult.Json が持つ
     private static readonly JsonSerializerOptions RequestJsonOptions = new()
@@ -149,7 +152,7 @@ public sealed class GameHttpServer(SceneTree tree)
             }
 
             if (headerEnd < 0)
-                await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                await Tree.ToSignal(Tree, SceneTree.SignalName.ProcessFrame);
         }
 
         var headerStr = Encoding.UTF8.GetString(rawBytes.Take(headerEnd).ToArray());
@@ -189,7 +192,7 @@ public sealed class GameHttpServer(SceneTree tree)
             }
             else
             {
-                await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                await Tree.ToSignal(Tree, SceneTree.SignalName.ProcessFrame);
             }
         }
 

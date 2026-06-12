@@ -7,18 +7,20 @@ namespace gamekit.godot;
 
 /// <summary>
 /// どのゲームでも共通の組み込みルートを GameHttpServer に登録する。
-/// /state のペイロードはゲーム定義のため、stateProvider 経由で注入する
-/// （未初期化なら null を返すこと。503 を返す）。
+/// /state のペイロード型はゲーム定義のため、stateBuilder（ISceneQuery → DTO）を注入する。
+/// sceneProvider / sceneQueryProvider が null を返す間（未初期化）は 503 を返す。
 /// </summary>
 public static class GameApiRoutes
 {
     public static void Register(
         GameHttpServer server,
-        SceneTree tree,
         Func<IScene?> sceneProvider,
-        Func<object?> stateProvider
+        Func<ISceneQuery?> sceneQueryProvider,
+        Func<ISceneQuery, object> stateBuilder
     )
     {
+        var tree = server.Tree;
+
         server.MapGet(InputEndpoints.Ping, () => HttpResult.Json(new PingResponse("pong")));
 
         server.MapGet(
@@ -63,10 +65,10 @@ public static class GameApiRoutes
             InputEndpoints.State,
             () =>
             {
-                var state = stateProvider();
-                return state is null
+                var sceneQuery = sceneQueryProvider();
+                return sceneQuery is null
                     ? HttpResult.Text("not initialized", 503)
-                    : HttpResult.Json(state);
+                    : HttpResult.Json(stateBuilder(sceneQuery));
             }
         );
     }

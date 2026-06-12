@@ -1,4 +1,3 @@
-using System.Linq;
 using gamekit.contract.Mcp;
 using gamekit.godot;
 using Godot;
@@ -26,12 +25,7 @@ public partial class InputServer : Node
             return;
 
         var server = new GameHttpServer(GetTree());
-        GameApiRoutes.Register(
-            server,
-            GetTree(),
-            () => _scene,
-            () => _sceneQuery is null ? null : BuildStateResponse()
-        );
+        GameApiRoutes.Register(server, () => _scene, () => _sceneQuery, GameStateResponseBuilder.Build);
         server.MapPostJson<SetCameraPitchRequest>(TpsEndpoints.CameraPitch, HandleCameraPitch);
         server.MapPostJson<LookAtPositionRequest>(TpsEndpoints.LookAt, HandleLookAt);
         server.MapPostJson<SetAimingRequest>(TpsEndpoints.SetAiming, HandleSetAiming);
@@ -72,49 +66,5 @@ public partial class InputServer : Node
             return HttpResult.Text("not initialized", 503);
         _player.SetAiming(cmd.IsAiming);
         return HttpResult.Json(new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
-    }
-
-    private GameStateResponse BuildStateResponse()
-    {
-        var objects = _sceneQuery!.Snapshot.Select(obj =>
-        {
-            var health = obj.GetComponent<HealthComponent>();
-            var weapon = obj.GetComponent<WeaponComponent>();
-            var transform = obj.GetComponent<TransformComponent>();
-            var camera = obj.GetComponent<CameraComponent>();
-            var bounds = obj.GetComponent<BoundsComponent>();
-
-            WeaponDto? weaponDto = null;
-            if (weapon is not null)
-            {
-                Vec3Dto? muzzlePos = null;
-                Vec3Dto? muzzleDir = null;
-                if (transform is not null)
-                {
-                    var pos = transform.Position;
-                    muzzlePos = new Vec3Dto(pos.X, pos.Y + 1.3f, pos.Z);
-                }
-                if (camera is not null)
-                    muzzleDir = new Vec3Dto(camera.Forward.X, camera.Forward.Y, camera.Forward.Z);
-                var ads = obj.GetComponent<AdsComponent>();
-                weaponDto = new WeaponDto(weapon.CurrentAmmo, weapon.MagazineSize, weapon.IsReloading, muzzlePos, muzzleDir, ads?.IsAiming);
-            }
-
-            BoundsDto? boundsDto = null;
-            if (bounds is not null)
-                boundsDto = new BoundsDto(
-                    new Vec3Dto(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
-                    new Vec3Dto(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)
-                );
-
-            return new ObjectSnapshotDto(
-                obj.Id.AsPrimitive(),
-                obj.Name,
-                health is not null ? new HealthDto(health.Hp, health.MaxHp) : null,
-                weaponDto,
-                boundsDto
-            );
-        }).ToArray();
-        return new GameStateResponse(_sceneQuery.FrameCount, _sceneQuery.ObjectCount, objects);
     }
 }
