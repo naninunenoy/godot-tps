@@ -1,6 +1,4 @@
 using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using gamekit.contract.Mcp;
 using gamekit.godot;
 using Godot;
@@ -34,9 +32,9 @@ public partial class InputServer : Node
             () => _scene,
             () => _sceneQuery is null ? null : BuildStateResponse()
         );
-        server.MapPost(TpsEndpoints.CameraPitch, body => Task.FromResult(HandleCameraPitch(body)));
-        server.MapPost(TpsEndpoints.LookAt, body => Task.FromResult(HandleLookAt(body)));
-        server.MapPost(TpsEndpoints.SetAiming, body => Task.FromResult(HandleSetAiming(body)));
+        server.MapPostJson<SetCameraPitchRequest>(TpsEndpoints.CameraPitch, HandleCameraPitch);
+        server.MapPostJson<LookAtPositionRequest>(TpsEndpoints.LookAt, HandleLookAt);
+        server.MapPostJson<SetAimingRequest>(TpsEndpoints.SetAiming, HandleSetAiming);
 
         var err = server.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
@@ -52,35 +50,26 @@ public partial class InputServer : Node
 
     public override void _Process(double delta) => _server?.Poll();
 
-    private HttpResult HandleCameraPitch(string body)
+    private HttpResult HandleCameraPitch(SetCameraPitchRequest cmd)
     {
         if (_player is null)
             return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
         _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
         return HttpResult.Json(new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
     }
 
-    private HttpResult HandleLookAt(string body)
+    private HttpResult HandleLookAt(LookAtPositionRequest cmd)
     {
         if (_player is null)
             return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
         _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
         return HttpResult.Json(new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
     }
 
-    private HttpResult HandleSetAiming(string body)
+    private HttpResult HandleSetAiming(SetAimingRequest cmd)
     {
         if (_player is null)
             return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
         _player.SetAiming(cmd.IsAiming);
         return HttpResult.Json(new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
     }

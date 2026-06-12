@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 
@@ -14,6 +15,13 @@ namespace gamekit.godot;
 /// </summary>
 public sealed class GameHttpServer(SceneTree tree)
 {
+    // リクエスト解釈は大文字小文字を区別しない（クライアント実装のプロパティ命名差を許容する）。
+    // レスポンス側の方針（PascalCase・null 省略）は HttpResult.Json が持つ
+    private static readonly JsonSerializerOptions RequestJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly TcpServer _tcpServer = new();
     private readonly Dictionary<(string Method, string Path), Func<string, Task<HttpResult>>> _routes =
         new();
@@ -21,8 +29,36 @@ public sealed class GameHttpServer(SceneTree tree)
     public void MapGet(string path, Func<Task<HttpResult>> handler) =>
         Map("GET", path, _ => handler());
 
+    public void MapGet(string path, Func<HttpResult> handler) =>
+        Map("GET", path, _ => Task.FromResult(handler()));
+
     public void MapPost(string path, Func<string, Task<HttpResult>> handler) =>
         Map("POST", path, handler);
+
+    /// <summary>
+    /// JSON ボディを TReq に解釈して同期ハンドラへ渡す。
+    /// ボディが不正（JSON でない・null）な場合は 400 を返す。
+    /// </summary>
+    public void MapPostJson<TReq>(string path, Func<TReq, HttpResult> handler) =>
+        Map(
+            "POST",
+            path,
+            body =>
+            {
+                TReq? request;
+                try
+                {
+                    request = JsonSerializer.Deserialize<TReq>(body, RequestJsonOptions);
+                }
+                catch (JsonException)
+                {
+                    request = default;
+                }
+                return Task.FromResult(
+                    request is null ? HttpResult.Text("invalid request", 400) : handler(request)
+                );
+            }
+        );
 
     private void Map(string method, string path, Func<string, Task<HttpResult>> handler)
     {

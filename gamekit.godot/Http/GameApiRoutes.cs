@@ -1,7 +1,5 @@
 using System;
 using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using gamekit.contract.Mcp;
 using Godot;
 
@@ -21,23 +19,20 @@ public static class GameApiRoutes
         Func<object?> stateProvider
     )
     {
-        server.MapGet(
-            InputEndpoints.Ping,
-            () => Task.FromResult(HttpResult.Json(new PingResponse("pong")))
-        );
+        server.MapGet(InputEndpoints.Ping, () => HttpResult.Json(new PingResponse("pong")));
 
         server.MapGet(
             InputEndpoints.Actions,
             () =>
             {
                 var actions = InputMap.GetActions().Select(a => a.ToString()).ToArray();
-                return Task.FromResult(HttpResult.Json(new GetActionsResponse(actions)));
+                return HttpResult.Json(new GetActionsResponse(actions));
             }
         );
 
-        server.MapPost(
+        server.MapPostJson<PressActionRequest>(
             InputEndpoints.PressAction,
-            body => Task.FromResult(HandlePressAction(tree, body))
+            request => HandlePressAction(tree, request)
         );
 
         server.MapGet(
@@ -58,9 +53,9 @@ public static class GameApiRoutes
             {
                 var scene = sceneProvider();
                 if (scene is null)
-                    return Task.FromResult(HttpResult.Text("not initialized", 503));
+                    return HttpResult.Text("not initialized", 503);
                 var commands = scene.AvailableCommands.Select(c => c.Name).ToArray();
-                return Task.FromResult(HttpResult.Json(new CommandListResponse(commands)));
+                return HttpResult.Json(new CommandListResponse(commands));
             }
         );
 
@@ -69,19 +64,16 @@ public static class GameApiRoutes
             () =>
             {
                 var state = stateProvider();
-                return Task.FromResult(
-                    state is null
-                        ? HttpResult.Text("not initialized", 503)
-                        : HttpResult.Json(state)
-                );
+                return state is null
+                    ? HttpResult.Text("not initialized", 503)
+                    : HttpResult.Json(state);
             }
         );
     }
 
-    private static HttpResult HandlePressAction(SceneTree tree, string body)
+    private static HttpResult HandlePressAction(SceneTree tree, PressActionRequest request)
     {
-        var request = JsonSerializer.Deserialize<PressActionRequest>(body);
-        if (request is null || string.IsNullOrEmpty(request.Action))
+        if (string.IsNullOrEmpty(request.Action))
             return HttpResult.Json(new PressActionResponse(false, "invalid request"));
 
         if (!InputMap.HasAction(request.Action))
