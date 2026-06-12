@@ -42,6 +42,7 @@ public sealed class GameHttpServer(SceneTree tree)
             HandleConnectionAsync(_tcpServer.TakeConnection());
     }
 
+    // async void のため、ここから例外を漏らすとプロセスごと落ちる。全経路を捕捉すること
     private async void HandleConnectionAsync(StreamPeerTcp peer)
     {
         var responseSent = false;
@@ -62,13 +63,15 @@ public sealed class GameHttpServer(SceneTree tree)
             GD.PrintErr($"[GameHttpServer] {ex.Message}");
             if (!responseSent)
             {
-                try { WriteResponse(peer, HttpResult.Text(ex.Message, 500)); }
+                var status = ex is HttpBadRequestException ? 400 : 500;
+                try { WriteResponse(peer, HttpResult.Text(ex.Message, status)); }
                 catch { /* peer may already be closed */ }
             }
         }
         finally
         {
-            peer.DisconnectFromHost();
+            try { peer.DisconnectFromHost(); }
+            catch { /* peer may already be closed */ }
         }
     }
 
@@ -116,6 +119,8 @@ public sealed class GameHttpServer(SceneTree tree)
         var headerStr = Encoding.UTF8.GetString(rawBytes.Take(headerEnd).ToArray());
         var lines = headerStr.Split("\r\n");
         var requestParts = lines[0].Split(' ');
+        if (requestParts.Length < 2)
+            throw new HttpBadRequestException($"malformed request line: {lines[0]}");
         var method = requestParts[0];
         var path = requestParts[1];
 
@@ -123,13 +128,22 @@ public sealed class GameHttpServer(SceneTree tree)
         foreach (var line in lines.Skip(1))
         {
             if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                contentLength = int.Parse(line.Split(':')[1].Trim());
+            {
+                var value = line.Split(':')[1].Trim();
+                if (!int.TryParse(value, out contentLength) || contentLength < 0)
+                    throw new HttpBadRequestException($"invalid Content-Length: {value}");
+            }
         }
 
         var bodyBytes = rawBytes.Skip(headerEnd + 4).ToList();
         while (bodyBytes.Count < contentLength)
         {
             peer.Poll();
+
+            var status = peer.GetStatus();
+            if (status is StreamPeerTcp.Status.None or StreamPeerTcp.Status.Error)
+                throw new System.IO.IOException($"Connection dropped (status={status})");
+
             var available = peer.GetAvailableBytes();
             if (available > 0)
             {

@@ -96,12 +96,20 @@ public static class GameApiRoutes
         );
     }
 
+    // async void のため、ここから例外を漏らすとプロセスごと落ちる（終了中のツリー破棄等）
     private static async void ReleaseActionAfterDelay(SceneTree tree, string action, int durationMs)
     {
-        await tree.ToSignal(
-            tree.CreateTimer(durationMs / 1000.0),
-            SceneTreeTimer.SignalName.Timeout
-        );
-        Input.ActionRelease(action);
+        try
+        {
+            await tree.ToSignal(
+                tree.CreateTimer(durationMs / 1000.0),
+                SceneTreeTimer.SignalName.Timeout
+            );
+            Input.ActionRelease(action);
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[GameApiRoutes] ActionRelease failed: {ex.Message}");
+        }
     }
 }
