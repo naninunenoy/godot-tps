@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using gamekit.godot.Logging;
 using Godot;
+using Microsoft.Extensions.Logging;
 
 namespace gamekit.godot;
 
@@ -12,8 +15,20 @@ namespace gamekit.godot;
 /// Node ではないプレーンクラスなので、ゲーム側の Node（autoload 等）が
 /// 生成して _Process から Poll() を呼ぶ。フレーム待ちは SceneTree 経由で行う。
 /// </summary>
-public sealed class GameHttpServer(SceneTree tree)
+public sealed class GameHttpServer(SceneTree tree, ILogger? logger = null)
 {
+    /// <summary>フレーム待ち・タイマー・ルートハンドラがシーンへアクセスするための SceneTree。</summary>
+    public SceneTree Tree { get; } = tree;
+
+    private readonly ILogger _logger = logger ?? AppLogger.For<GameHttpServer>();
+
+    // リクエスト解釈は大文字小文字を区別しない（クライアント実装のプロパティ命名差を許容する）。
+    // レスポンス側の方針（PascalCase・null 省略）は HttpResult.Json が持つ
+    private static readonly JsonSerializerOptions RequestJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly TcpServer _tcpServer = new();
     private readonly Dictionary<(string Method, string Path), Func<string, Task<HttpResult>>> _routes =
         new();
@@ -21,8 +36,36 @@ public sealed class GameHttpServer(SceneTree tree)
     public void MapGet(string path, Func<Task<HttpResult>> handler) =>
         Map("GET", path, _ => handler());
 
+    public void MapGet(string path, Func<HttpResult> handler) =>
+        Map("GET", path, _ => Task.FromResult(handler()));
+
     public void MapPost(string path, Func<string, Task<HttpResult>> handler) =>
         Map("POST", path, handler);
+
+    /// <summary>
+    /// JSON ボディを TReq に解釈して同期ハンドラへ渡す。
+    /// ボディが不正（JSON でない・null）な場合は 400 を返す。
+    /// </summary>
+    public void MapPostJson<TReq>(string path, Func<TReq, HttpResult> handler) =>
+        Map(
+            "POST",
+            path,
+            body =>
+            {
+                TReq? request;
+                try
+                {
+                    request = JsonSerializer.Deserialize<TReq>(body, RequestJsonOptions);
+                }
+                catch (JsonException)
+                {
+                    request = default;
+                }
+                return Task.FromResult(
+                    request is null ? HttpResult.Text("invalid request", 400) : handler(request)
+                );
+            }
+        );
 
     private void Map(string method, string path, Func<string, Task<HttpResult>> handler)
     {
@@ -42,13 +85,14 @@ public sealed class GameHttpServer(SceneTree tree)
             HandleConnectionAsync(_tcpServer.TakeConnection());
     }
 
+    // async void のため、ここから例外を漏らすとプロセスごと落ちる。全経路を捕捉すること
     private async void HandleConnectionAsync(StreamPeerTcp peer)
     {
         var responseSent = false;
         try
         {
             var (method, path, body) = await ReadRequestAsync(peer);
-            GD.PrintRich($"[GameHttpServer] {method} {path}");
+            _logger.LogDebug("{Method} {Path}", method, path);
 
             var result = _routes.TryGetValue((method, path), out var handler)
                 ? await handler(body)
@@ -59,16 +103,22 @@ public sealed class GameHttpServer(SceneTree tree)
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[GameHttpServer] {ex.Message}");
+            // クライアント起因（不正リクエスト・切断）は Warning、それ以外（ハンドラのバグ等）は Error
+            if (ex is HttpBadRequestException or System.IO.IOException)
+                _logger.LogWarning("Request failed: {Message}", ex.Message);
+            else
+                _logger.LogError(ex, "Request handling failed");
             if (!responseSent)
             {
-                try { WriteResponse(peer, HttpResult.Text(ex.Message, 500)); }
+                var status = ex is HttpBadRequestException ? 400 : 500;
+                try { WriteResponse(peer, HttpResult.Text(ex.Message, status)); }
                 catch { /* peer may already be closed */ }
             }
         }
         finally
         {
-            peer.DisconnectFromHost();
+            try { peer.DisconnectFromHost(); }
+            catch { /* peer may already be closed */ }
         }
     }
 
@@ -110,12 +160,14 @@ public sealed class GameHttpServer(SceneTree tree)
             }
 
             if (headerEnd < 0)
-                await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                await Tree.ToSignal(Tree, SceneTree.SignalName.ProcessFrame);
         }
 
         var headerStr = Encoding.UTF8.GetString(rawBytes.Take(headerEnd).ToArray());
         var lines = headerStr.Split("\r\n");
         var requestParts = lines[0].Split(' ');
+        if (requestParts.Length < 2)
+            throw new HttpBadRequestException($"malformed request line: {lines[0]}");
         var method = requestParts[0];
         var path = requestParts[1];
 
@@ -123,13 +175,22 @@ public sealed class GameHttpServer(SceneTree tree)
         foreach (var line in lines.Skip(1))
         {
             if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                contentLength = int.Parse(line.Split(':')[1].Trim());
+            {
+                var value = line.Split(':')[1].Trim();
+                if (!int.TryParse(value, out contentLength) || contentLength < 0)
+                    throw new HttpBadRequestException($"invalid Content-Length: {value}");
+            }
         }
 
         var bodyBytes = rawBytes.Skip(headerEnd + 4).ToList();
         while (bodyBytes.Count < contentLength)
         {
             peer.Poll();
+
+            var status = peer.GetStatus();
+            if (status is StreamPeerTcp.Status.None or StreamPeerTcp.Status.Error)
+                throw new System.IO.IOException($"Connection dropped (status={status})");
+
             var available = peer.GetAvailableBytes();
             if (available > 0)
             {
@@ -139,7 +200,7 @@ public sealed class GameHttpServer(SceneTree tree)
             }
             else
             {
-                await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                await Tree.ToSignal(Tree, SceneTree.SignalName.ProcessFrame);
             }
         }
 

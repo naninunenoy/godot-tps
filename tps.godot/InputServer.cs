@@ -1,25 +1,25 @@
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using gamekit.contract.Mcp;
 using gamekit.godot;
+using gamekit.godot.Logging;
 using Godot;
-using tps;
+using Microsoft.Extensions.Logging;
 using tps.contract.Mcp;
 using tps.csharp;
+using VitalRouter;
 
 public partial class InputServer : Node
 {
+    private readonly ILogger<InputServer> _logger = AppLogger.For<InputServer>();
     private GameHttpServer? _server;
     private ISceneQuery? _sceneQuery;
     private IScene? _scene;
-    private Player? _player;
+    private Router? _router;
 
-    public void Initialize(ISceneQuery sceneQuery, IScene scene, Player player)
+    public void Initialize(ISceneQuery sceneQuery, IScene scene, Router router)
     {
         _sceneQuery = sceneQuery;
         _scene = scene;
-        _player = player;
+        _router = router;
     }
 
     public override void _Ready()
@@ -28,23 +28,28 @@ public partial class InputServer : Node
             return;
 
         var server = new GameHttpServer(GetTree());
-        GameApiRoutes.Register(
-            server,
-            GetTree(),
-            () => _scene,
-            () => _sceneQuery is null ? null : BuildStateResponse()
+        GameApiRoutes.Register(server, () => _scene, () => _sceneQuery, GameStateResponseBuilder.Build);
+        // TPS 固有ルート。CQRS 規約（外部からの書き込みはコマンド経由）に従い、Router へ publish するだけ
+        server.MapPostJson<SetCameraPitchRequest>(
+            TpsEndpoints.CameraPitch,
+            cmd => Publish(cmd, $"pitch={cmd.PitchDegrees}°")
         );
-        server.MapPost(TpsEndpoints.CameraPitch, body => Task.FromResult(HandleCameraPitch(body)));
-        server.MapPost(TpsEndpoints.LookAt, body => Task.FromResult(HandleLookAt(body)));
-        server.MapPost(TpsEndpoints.SetAiming, body => Task.FromResult(HandleSetAiming(body)));
+        server.MapPostJson<LookAtPositionRequest>(
+            TpsEndpoints.LookAt,
+            cmd => Publish(cmd, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})")
+        );
+        server.MapPostJson<SetAimingRequest>(
+            TpsEndpoints.SetAiming,
+            cmd => Publish(cmd, $"aiming={cmd.IsAiming}")
+        );
 
         var err = server.Listen(InputEndpoints.Port);
         if (err != Error.Ok)
         {
-            GD.PrintErr($"[InputServer] Failed to listen on port {InputEndpoints.Port}: {err}");
+            _logger.LogError("Failed to listen on port {Port}: {Error}", InputEndpoints.Port, err);
             return;
         }
-        GD.Print($"[InputServer] Listening on port {InputEndpoints.Port}");
+        _logger.LogInformation("Listening on port {Port}", InputEndpoints.Port);
         _server = server;
     }
 
@@ -52,80 +57,12 @@ public partial class InputServer : Node
 
     public override void _Process(double delta) => _server?.Poll();
 
-    private HttpResult HandleCameraPitch(string body)
+    private HttpResult Publish<TCommand>(TCommand command, string message)
+        where TCommand : ICommand
     {
-        if (_player is null)
+        if (_router is null)
             return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<SetCameraPitchRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
-        _player.SetCameraPitch(cmd.PitchDegrees * Mathf.Pi / 180f);
-        return HttpResult.Json(new CameraControlResponse(true, $"pitch={cmd.PitchDegrees}°"));
-    }
-
-    private HttpResult HandleLookAt(string body)
-    {
-        if (_player is null)
-            return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<LookAtPositionRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
-        _player.FaceToward(cmd.X, cmd.Y, cmd.Z);
-        return HttpResult.Json(new CameraControlResponse(true, $"looking at ({cmd.X},{cmd.Y},{cmd.Z})"));
-    }
-
-    private HttpResult HandleSetAiming(string body)
-    {
-        if (_player is null)
-            return HttpResult.Text("not initialized", 503);
-        var cmd = JsonSerializer.Deserialize<SetAimingRequest>(body);
-        if (cmd is null)
-            return HttpResult.Text("invalid request", 400);
-        _player.SetAiming(cmd.IsAiming);
-        return HttpResult.Json(new CameraControlResponse(true, $"aiming={cmd.IsAiming}"));
-    }
-
-    private GameStateResponse BuildStateResponse()
-    {
-        var objects = _sceneQuery!.Snapshot.Select(obj =>
-        {
-            var health = obj.GetComponent<HealthComponent>();
-            var weapon = obj.GetComponent<WeaponComponent>();
-            var transform = obj.GetComponent<TransformComponent>();
-            var camera = obj.GetComponent<CameraComponent>();
-            var bounds = obj.GetComponent<BoundsComponent>();
-
-            WeaponDto? weaponDto = null;
-            if (weapon is not null)
-            {
-                Vec3Dto? muzzlePos = null;
-                Vec3Dto? muzzleDir = null;
-                if (transform is not null)
-                {
-                    var pos = transform.Position;
-                    muzzlePos = new Vec3Dto(pos.X, pos.Y + 1.3f, pos.Z);
-                }
-                if (camera is not null)
-                    muzzleDir = new Vec3Dto(camera.Forward.X, camera.Forward.Y, camera.Forward.Z);
-                var ads = obj.GetComponent<AdsComponent>();
-                weaponDto = new WeaponDto(weapon.CurrentAmmo, weapon.MagazineSize, weapon.IsReloading, muzzlePos, muzzleDir, ads?.IsAiming);
-            }
-
-            BoundsDto? boundsDto = null;
-            if (bounds is not null)
-                boundsDto = new BoundsDto(
-                    new Vec3Dto(bounds.Min.X, bounds.Min.Y, bounds.Min.Z),
-                    new Vec3Dto(bounds.Max.X, bounds.Max.Y, bounds.Max.Z)
-                );
-
-            return new ObjectSnapshotDto(
-                obj.Id.AsPrimitive(),
-                obj.Name,
-                health is not null ? new HealthDto(health.Hp, health.MaxHp) : null,
-                weaponDto,
-                boundsDto
-            );
-        }).ToArray();
-        return new GameStateResponse(_sceneQuery.FrameCount, _sceneQuery.ObjectCount, objects);
+        _ = _router.PublishAsync(command);
+        return HttpResult.Json(new CameraControlResponse(true, message));
     }
 }

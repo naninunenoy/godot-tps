@@ -19,4 +19,7 @@ public static class AppLogger
     });
 
     public static ILogger<T> For<T>() => Factory.CreateLogger<T>();
+
+    /// <summary>static クラスなどジェネリック型引数にできない呼び出し元向け。</summary>
+    public static ILogger For(string category) => Factory.CreateLogger(category);
 }

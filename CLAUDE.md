@@ -60,13 +60,16 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 - **Godot の Node はゲーム側**（シーンにアタッチするスクリプトはゲームアセンブリ必須）。
   基盤はプレーンクラスを提供し、Node がコンポジションで使う
 - `gamekit.test` は tps の語彙（`GameEvents` 等）に依存させない
+- ProjectReference はソース上で直接 using しているプロジェクトに明示的に張る（推移的参照に頼らない）。直接 using しなくなったら外す
 
 ### tps.godot の責務
 
 - インテグレーション・アプリ起動・物理/衝突判定・プラットフォーム依存処理
 - **DI ルート**：`Main.cs` が全依存を生成・配線する
 - **Game API の組み立て**：`InputServer`(autoload) が gamekit.godot の `GameHttpServer` を構成し、
-  TPS ルート（camera_pitch / look_at / set_aiming）と state ビルダー（World → `GameStateResponse`）を登録する
+  TPS ルート（camera_pitch / look_at / set_aiming）と state ビルダーを登録する。
+  TPS ルートは受信したコマンド（ICommand 兼リクエスト DTO）を Router へ publish するだけ（ADR-0013）。
+  state の組み立ては tps.csharp の `GameStateResponseBuilder`（Godot 非依存・テスト可能）
 
 ### tps.csharp の責務（ECS ライク）
 
@@ -115,6 +118,8 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 
 - コード変更後に `dotnet build` が自動実行される。ビルドエラーが報告されたら必ず修正してから完了とすること。
 - 機能追加が完了したら自動でコミットする。
+- `.cs` の一括置換に PowerShell の `Get-Content` / `Set-Content` を使わない（BOM なし UTF-8 を CP932 と誤認し日本語コメントが文字化けする）。`[System.IO.File]::ReadAllText` / `WriteAllText` を使う。
+- 稼働中の godot-ext MCP サーバーが `tps.mcp/bin` の DLL をロックするため、tps.mcp のビルド検証は `dotnet build tps.mcp -o tps.mcp/bin/verify` のように別出力先で行う（検証後に削除）。
 
 ### テストコードの規約
 
@@ -133,6 +138,7 @@ Godot 4.6 (C#) で作る TPS (Third-Person Shooter) ゲーム。
 
 - `take_screenshot` は明示的に「スクリーンショットを撮って」と指示された場合のみ使用する（自動実行しない）
 - `godot-ext` のツールは `run_project` でゲームを起動した後でないと使用できない
+- `tps.mcp` のコード変更は MCP 接続時のビルドが使われるため、次回の MCP 再接続（セッション再起動）から有効になる（ADR-0011 参照）
 
 ## godot-mcp の使用ルール
 
