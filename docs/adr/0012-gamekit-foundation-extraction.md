@@ -35,7 +35,9 @@ TPS 固有実装の境界がコード上に存在しなかった。
 2. **VitalRouter を基盤の公式コマンドバスとする。** 「コマンド = `VitalRouter.ICommand` 実装」
    という規約ごと基盤が持つ。`ICommandPublisher` のような独自抽象はあえて作らない。
 3. **/state のペイロードはゲーム定義。** 基盤はエンドポイントと枠だけ提供する。
-   サーバー側は `Func<object?>` の stateProvider 注入（null = 未初期化 = 503）、
+   サーバー側はゲームが注入する `Func<ISceneQuery?>`（null = 未初期化 = 503）と
+   `Func<ISceneQuery, object>` の stateBuilder（tps では tps.csharp の
+   `GameStateResponseBuilder`。Godot 非依存の純粋マッピングとして単体テストする）、
    クライアント側は `GetStateAsync<TState>()`（型はゲームが指定）と
    `GetStateRawAsync()`（素の JSON 中継。MCP / CLI の ToonEncoder 変換用）。
 4. **Godot の Node はゲーム側、基盤はプレーンクラス。** Godot はシーンにアタッチする
@@ -66,4 +68,44 @@ TPS 固有実装の境界がコード上に存在しなかった。
 | 新しいゲームは gamekit 参照 + Component / System / ルート登録だけで始められる | 名前空間 `gamekit.contract.Mcp` は実態（HTTP API）と名前がずれた命名負債（リネームは将来一括で） |
 | MCP / CLI の汎用部分がゲームの DTO を知らずに動く（raw JSON 中継） | state 出力から null フィールドが消える挙動変更あり（サーバー側 `WhenWritingNull` がそのまま反映） |
 
-切り出し時の経緯・トレードオフの詳細は [memo.md](../../memo.md)、移行計画は [plan.md](../../plan.md) を参照。
+## 実装メモ
+
+切り出し実施中に下した、コードだけでは読み取れない判断。
+
+- **グローバル using で移行コストを抑えた。** 基盤型（`World` / `Entity` 等）の名前空間変更に伴う
+  全ファイルの using 修正を避けるため、csproj の `<Using Include="gamekit" />`
+  （tps.godot は `GlobalUsings.cs`）を使う。ファイル単位では gamekit への依存が見えなくなる
+  トレードオフは、基盤型をプロジェクト全域で使う前提で許容した。
+- **ProjectReference はソース上で直接 using しているプロジェクトに明示的に張る**（推移的参照に
+  頼らない）。直接 using しなくなったら外す。依存関係を csproj から読めるようにするため。
+- **クライアントの拡張は継承**（`TpsGameApiClient : GameApiClient`）。同一サーバーへの
+  エンドポイント追加なので、基底の `Http`（BaseAddress 設定済み）と `PostJsonAsync` を
+  protected で公開する。protected メンバーは事実上の公開 API になるため変更時は派生側に注意。
+- **`GameCommand` 名前空間は基盤・ゲームの両方に存在する**（`gamekit.contract.GameCommand` =
+  ライフサイクル、`tps.contract.GameCommand` = TPS コマンド）。既存規約との一貫性を優先した。
+- **`SequentialIdGenerator` のカウンタは prefix 間で共有**（`Next("a")`→`a#1`、`Next("b")`→`b#2`）。
+  この仕様は gamekit.test で固定化しており、変えるならテストごと変える。
+- **EntityId の wire format は素の文字列**（UnitGenerator の JsonConverter）。名前空間移動の
+  影響を受けないことを gamekit.test で担保している。
+
+## 移行履歴
+
+| Phase | コミット | 内容 |
+|---|---|---|
+| 計画 | `fc5ed50` | 移行計画の策定 |
+| 1 | `46275fc` | ECS コア・ログストアを gamekit へ。gamekit.test 新設 |
+| 2 | `d3c7b34` | 汎用エンドポイント・DTO・ライフサイクルコマンドを gamekit.contract へ |
+| 3 | `4b0fb12` | 汎用 HTTP クライアントを gamekit.client へ。TpsGameApiClient 新設 |
+| 4 | `e4257cb` | GameHttpServer / GameApiRoutes / ロギングを gamekit.godot へ |
+| 5 | `7924d0b` | 汎用 MCP ツールを gamekit.mcp へ。CLI をコマンドクラス分割 |
+| 6 | `91e17bb` | ドキュメント更新・本 ADR 作成 |
+
+切り出し後のコードレビューで決めた API 方針は ADR-0013 / ADR-0014 を参照。
+
+## 今後の課題
+
+- 名前空間 `gamekit.contract.Mcp` → `Api` 等への一括リネーム（命名負債）
+- 旧実装（`Health` / `KillCounter` / `WeaponState` と R3 依存）の整理（`PlayerController` は使用中）
+- HTTP ポート (9876) の設定可能化
+- `Godot.NET.Sdk` バージョンの一元管理（Directory.Build.props 等）
+- HTTP から任意の ICommand を投入する汎用エンドポイント（POST /command 等。ADR-0013 参照）
